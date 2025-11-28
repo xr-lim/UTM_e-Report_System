@@ -6,7 +6,7 @@ import GuestLayout from "@/Layouts/GuestLayout";
 
 import { Head, Link, useForm, router } from "@inertiajs/react";
 
-import { getAuth, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { app } from "@/firebaseConfig";
 
@@ -31,7 +31,7 @@ export default function Register() {
             await setDoc(doc(db, 'users', user.uid), {
             name: user.displayName || null,
             email: user.email || null,
-            role: 'student',
+            role: 'admin',
             created_at: serverTimestamp(),
             }, { merge: true });
 
@@ -56,6 +56,8 @@ export default function Register() {
 
             const user = userCred.user;
 
+            await sendEmailVerification(user);
+
             await updateProfile(userCred.user, {
                 displayName: data.name,
             });
@@ -64,14 +66,44 @@ export default function Register() {
             await setDoc(doc(db, "users", user.uid), {
                 name: data.name,
                 email: data.email,
-                role: "student",
+                role: "admin",
                 created_at: serverTimestamp(),
             });
 
-            router.visit(route('dashboard'));
+            router.visit(route('verify-email'));
 
         } catch (err) {
-            alert("Registration failed: " + err.message);
+            console.error("FULL ERROR OBJECT:", err);
+            
+            if (err.code === 'auth/email-already-in-use') {
+                try {
+                    const userCred = await signInWithEmailAndPassword(auth, data.email, data.password);
+                    const user = userCred.user;
+
+                    if (!user.emailVerified) {
+                        // CONDITION A: Account exists, but NOT verified.
+                        // Action: Resend email and remind them.
+                        await sendEmailVerification(user);
+                        
+                        alert("This email is already registered but NOT verified. We have resent the verification email.");
+                        router.visit(route('verify-email'));
+                    } else {
+                        // CONDITION B: Account exists and IS verified.
+                        alert("This email is already registered. Please log in.");
+                        router.visit(route('login'));
+                    }
+
+                } catch (loginErr) {
+                    // CONDITION C: Account exists, but the password they typed NOW 
+                    // doesn't match the old password. We can't help them here.
+                    alert("This email is already registered. Please log in.");
+                    router.visit(route('login'));
+                }
+            } else if (err.code === 'permission-denied') {
+                alert("Database Error: Firestore rules blocked saving user data.");
+            } else {
+                alert("Registration failed: " + err.message);
+            }
         }
     };
 

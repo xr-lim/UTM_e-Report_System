@@ -26,3 +26,8 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('dashboard');
 
+//Register to verify email page
+Route::get('/verify-email', function () {
+    return Inertia::render('Auth/VerifyEmail');
+})->name('verify-email');
+

@@ -1,10 +1,34 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/firebaseConfig";
+import { useEffect } from 'react';
 
 export default function Dashboard() {
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in, check verification
+                if (!user.emailVerified) {
+                    alert("You are not verified yet! Please check your email.");
+                    
+                    // Kick them out
+                    signOut(auth).then(() => {
+                        router.visit(route('verify-email')); // Or '/verify-email'
+                    });
+                }
+            } else {
+                // No user found (not logged in at all)
+                alert("Please log in to access the dashboard.");
+                router.visit(route('login'));
+            }
+        });
+
+        // Cleanup listener when leaving page
+        return () => unsubscribe();
+    }, []);
+
     const handleLogout = () => {
         // 1. Tell Firebase to kill the session
         signOut(auth).then(() => {

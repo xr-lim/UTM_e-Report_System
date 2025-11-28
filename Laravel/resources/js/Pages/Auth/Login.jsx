@@ -5,20 +5,67 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { app } from "@/firebaseConfig";
 
 export default function Login({ status, canResetPassword }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, setError } = useForm({
         email: '',
         password: '',
         remember: false,
     });
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
+        const auth = getAuth(app);
+        const db = getFirestore(app); // Connect to database
 
-        router.visit('/dashboard');
+        try {
+            // --- GATE 1: Check Credentials ---
+            const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+            const user = userCredential.user;
+
+            // --- GATE 2: Check Email Verification ---
+            if (!user.emailVerified) {
+                await auth.signOut();
+                setError('email', 'Your email address is not verified.');
+                return;
+            }
+
+            // --- GATE 3: Check "Admin" Role ---
+            // 1. Find the user's document in Firestore
+            const userDocRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userDocRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+
+                // 2. Check if the role is EXACTLY 'admin'
+                if (userData.role !== 'admin') {
+                    // FAIL: Valid login, but wrong role
+                    console.warn("Access Denied: User role is", userData.role);
+                    
+                    await auth.signOut(); // Kick them out
+                    setError('email', 'Access Denied: Admins only.');
+                    return;
+                }
+            } else {
+                // Document doesn't exist (Rare error)
+                await auth.signOut();
+                setError('email', 'Account error: Profile not found.');
+                return;
+            }
+
+            // --- SUCCESS ---
+            console.log("Admin Login successful");
+            router.visit(route('dashboard'));
+
+        } catch (error) {
+            console.error("Login Error:", error.code);
+            // ... (Your existing error handling switch case) ...
+            setError('email', 'Login failed: ' + error.message);
+        }
     };
 
     const handleGoogleLogin = async () => {
