@@ -19,11 +19,6 @@ Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 })->name('register');
 
-Route::post('/logout', function () {
-    auth()->logout();
-    return redirect('/login');
-})->name('logout');
-
 // ------------------------------
 // After login → Admin Dashboard
 // ------------------------------

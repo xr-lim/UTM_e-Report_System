@@ -1,7 +1,22 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
+import { signOut } from "firebase/auth";
+import { auth } from "@/firebaseConfig";
 
 export default function Dashboard() {
+    const handleLogout = () => {
+        // 1. Tell Firebase to kill the session
+        signOut(auth).then(() => {
+            console.log("User signed out from Firebase");
+            
+            // 2. Redirect the user to the login page
+            router.visit('/login'); 
+        }).catch((error) => {
+            console.error("Logout error", error);
+        });
+    };
+
     return (
         <AuthenticatedLayout
             header={
