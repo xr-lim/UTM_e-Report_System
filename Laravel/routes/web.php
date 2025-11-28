@@ -3,6 +3,10 @@
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
+// Redirect root to login page
+Route::get('/', function () {
+    return redirect()->route('login');
+});
 // ------------------------------
 // Authentication Pages (React)
 // ------------------------------

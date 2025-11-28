@@ -42,10 +42,13 @@ uv venv
 ### 3. Activate Virtual Environment
 
 On macOS/Linux:
+
 ```bash
 source .venv/bin/activate
 ```
+
 On Windows (Command Prompt):
+
 ```bash
 .venv\Scripts\activate
 ```
@@ -53,7 +56,7 @@ On Windows (Command Prompt):
 ### 4. Install Dependencies
 
 ```bash
-uv pip install -r uv.lock
+uv sync
 ```
 
 ## ⚡ Running the API
@@ -64,7 +67,6 @@ Navigate to the API directory and start the server:
 cd Suspicious_Identifier
 uvicorn FastAPI:app --reload
 ```
-
 
 ## 🛠️ API Usage
 
