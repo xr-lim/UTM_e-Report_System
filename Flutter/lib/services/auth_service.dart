@@ -5,7 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Google Sign In 
+  // Google Sign In
   Future<UserCredential?> signInWithGoogle() async {
     final googleSignIn = GoogleSignIn();
 
@@ -29,10 +29,16 @@ class AuthService {
     );
 
     // finally, lets sign in
-    final userCredential =
-        await FirebaseAuth.instance.signInWithCredential(credential);
+    final userCredential = await FirebaseAuth.instance.signInWithCredential(
+      credential,
+    );
 
     await ensureUserDocument(userCredential.user);
+
+    // Send email verification if not already verified
+    if (userCredential.user != null && !userCredential.user!.emailVerified) {
+      await userCredential.user!.sendEmailVerification();
+    }
 
     return userCredential;
   }
@@ -50,11 +56,11 @@ class AuthService {
     await userDoc.set({
       'created_at': FieldValue.serverTimestamp(),
       'email': user.email ?? '',
-      'name': (displayName != null && displayName.isNotEmpty)
-          ? displayName
-          : 'Unknown',
+      'name':
+          (displayName != null && displayName.isNotEmpty)
+              ? displayName
+              : 'Unknown',
       'role': 'student',
     });
   }
 }
-

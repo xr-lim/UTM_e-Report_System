@@ -100,6 +100,8 @@ app.*.map.json
 /Flutter/assets/.env
 /Flutter/android/key.properties
 /Flutter/android/local.properties
+/Flutter/android/app/google-services.json
+/Flutter/ios/Runner/GoogleService-Info.plist
 
 # -----------------------
 # Android Specifics
