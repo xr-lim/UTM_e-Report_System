@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UTM Report System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto;
+      background: #f5f7fa;
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: #000;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .header-brand .menu-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .header-brand span:first-child {
+      color: #ff6b35;
+    }
+
+    .header-brand span:nth-child(3) {
+      color: #ffa500;
+    }
+
+    .header-brand .subtitle {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .header-user {
+      background: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #000;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      background: white;
+      border-right: 1px solid #e0e0e0;
+      padding: 80px 0 20px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-menu {
+      list-style: none;
+    }
+
+    .sidebar-menu li {
+      margin: 0;
+    }
+
+    .sidebar-menu a {
+      display: block;
+      padding: 12px 24px;
+      color: #666;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+
+    .sidebar-menu a:hover {
+      background: #f5f7fa;
+      color: #333;
+    }
+
+    .sidebar-menu a.active {
+      background: #dfe8f5;
+      color: #0066cc;
+      border-left: 4px solid #0066cc;
+      padding-left: 20px;
+    }
+
+    /* Main Content */
+    .main {
+      margin-left: 240px;
+      margin-top: 64px;
+      flex: 1;
+      padding: 24px;
+    }
+
+    /* Page Title */
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0066cc;
+      margin-bottom: 24px;
+    }
+
+    /* Stats Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .stat-icon {
+      font-size: 40px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stat-content h3 {
+      font-size: 14px;
+      color: #666;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    /* Search & Filter */
+    .search-section {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      max-width: 400px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .search-box input::placeholder {
+      color: #999;
+    }
+
+    .filter-section {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .filter-section svg, .filter-section .location {
+      color: #666;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .view-btn, .page-info {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .page-nav {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .page-nav button {
+      background: white;
+      border: 1px solid #ddd;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-nav button:hover {
+      background: #f5f7fa;
+    }
+
+    /* Table */
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      background: #f9f9f9;
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      color: #333;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    tr:hover {
+      background: #fafafa;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-received {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .status-processed {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-verified {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-processed .status-dot {
+      background: #ffc107;
+    }
+
+    .status-approved .status-dot {
+      background: #28a745;
+    }
+
+    .status-reject .status-dot {
+      background: #dc3545;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #0066cc;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+    }
+
+    .action-btn:hover {
+      opacity: 0.7;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .btn-primary {
+      background: #0066cc;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #218838;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c82333;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 200px;
+      }
+
+      .main {
+        margin-left: 200px;
+      }
+
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+
+      .search-section {
+        flex-direction: column;
+      }
+
+      .search-box {
+        max-width: 100%;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      td, th {
+        padding: 12px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        width: 60px;
+        padding-top: 70px;
+      }
+
+      .sidebar-menu a {
+        padding: 12px;
+        text-align: center;
+      }
+
+      .main {
+        margin-left: 60px;
+        padding: 16px;
+      }
+
+      .header-brand .subtitle {
+        display: none;
+      }
+
+      .header-brand span:nth-child(3) {
+        display: none;
+      }
+
+      .search-section {
+        gap: 8px;
+      }
+
+      .filter-section {
+        display: none;
+      }
+
+      table {
+        font-size: 11px;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+      <div class="header">
+    <div class="header-brand">
+      <button class="menu-btn">☰</button>
+      <span>UTM</span><span>REPORT</span>
+      <div style="font-size: 11px; text-align: center;">
+        <div class="subtitle">SYSTEM</div>
+      </div>
+    </div>
+    <div class="header-user">👤</div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <ul class="sidebar-menu">
+      <li><a href="#" onclick="switchPage('dashboard')" class="active">Dashboard</a></li>
+      <li><a href="#" onclick="switchPage('reviews')">Review Reports</a></li>
+      <li><a href="#" onclick="switchPage('history')">Report History</a></li>
+      <li style="margin-top: 32px;"><a href="#" onclick="switchPage('statistics')">Statistics</a></li>
+      <li><a href="#" onclick="switchPage('settings')">Settings</a></li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Dashboard Page -->
+    <div id="dashboard-page">
+      <!-- Page Title -->
+      <div class="page-title">Mobile Photo Reports - Transmitted Data</div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">●</div>
+          <div class="stat-content">
+            <h3>Photos Received</h3>
+            <div class="stat-value">1,247</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✓</div>
+          <div class="stat-content">
+            <h3>Verified</h3>
+            <div class="stat-value">892</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">●</div>
+          <div class="stat-content">
+            <h3>Awaiting Review</h3>
+            <div class="stat-value">156</div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Right Side Info -->
+    <div style="float: right; margin-bottom: 24px; text-align: right;">
+      <div style="font-size: 14px; font-weight: 600; color: #333;">Latest Transfer</div>
+      <div style="font-size: 12px; color: #666;">Mobile Camera</div>
+      <div style="font-size: 12px; color: #666;">Wifi/4G Transfer</div>
+      <div style="margin-top: 8px; font-size: 16px; font-weight: 700; color: #333;">1,247</div>
+      <div style="font-size: 12px; color: #666;">892 verified | 156 pending</div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="search-section">
+      <div class="search-box">
+        <input type="text" placeholder="Search plate number, location or reporter" id="searchInput" onkeyup="filterTable()">
+      </div>
+      <div class="filter-section">
+        <span>📍</span>
+        <span class="location">Malaysia Wide</span>
+            </div>
+      <button class="view-btn">📊 Export Report</button>
+      <div class="page-nav">
+        <button onclick="previousPage()">‹</button>
+        <div class="page-info">Page 1 of 25</div>
+        <button onclick="nextPage()">›</button>
+            </div>
+          </div>
+
+    <!-- Main Layout: Table + Photo Preview -->
+    <div style="display: grid; grid-template-columns: 1fr 380px; gap: 20px; margin-top: 20px;">
+      <!-- Left: Table -->
+      <div class="table-container">
+        <table id="reportTable">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Report ID</th>
+              <th>License Plate</th>
+              <th>Location</th>
+              <th>Report Date</th>
+              <th>Violation Type</th>
+              <th>Status</th>
+              <th>Photos</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right: Photo Preview Panel -->
+      <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: sticky; top: 100px; height: fit-content;">
+        <div style="font-weight: 700; margin-bottom: 12px; font-size: 14px;">Photo Preview</div>
+        <div id="photoPreview" style="border-radius: 8px; background: #f0f0f0; min-height: 280px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; margin-bottom: 12px;">
+          Click a row to view photos
+        </div>
+        <div id="photoInfo" style="font-size: 12px; color: #666;">
+          <div id="reportInfo"></div>
+        </div>
+        <button class="btn btn-primary" id="downloadBtn" onclick="downloadPhotos()" style="width: 100%; margin-top: 12px; display: none;">Download Photos</button>
+      </div>
+    </div>
+    </div>
+
+    <!-- Report History Page -->
+    <div id="history-page" style="display: none;">
+      <div class="page-title">Report History</div>
+      
+      <!-- Filter Options -->
+      <div class="search-section">
+        <div class="search-box">
+          <input type="text" placeholder="Search report ID, plate or location" id="historySearchInput" onkeyup="filterHistoryTable()">
+        </div>
+        <div style="display: flex; gap: 12px; margin-left: auto;">
+          <select id="historyStatusFilter" onchange="filterHistoryTable()" style="padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px;">
+            <option value="">All Status</option>
+            <option value="Received">Received</option>
+            <option value="Processed">Processed</option>
+            <option value="Verified">Verified</option>
+          </select>
+          <button class="view-btn">Export CSV</button>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="table-container">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Report ID</th>
+              <th>License Plate</th>
+              <th>Location</th>
+              <th>Violation Type</th>
+              <th>Received Date</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Processing Modal -->
+  <div class="modal" id="actionModal">
+    <div class="modal-content">
+      <div class="modal-title" id="modalTitle">Process Photo Report</div>
+      
+      <div class="form-group">
+        <label>Report ID (Mobile Transmitted)</label>
+        <input type="text" id="modalReportId" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Photo Processing Status</label>
+        <select id="modalStatus">
+          <option value="Received">Just Received</option>
+          <option value="Processed">Processing</option>
+          <option value="Verified">Verified</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Processing Notes</label>
+        <textarea id="modalNotes" placeholder="Add processing notes..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAction()">Update Status</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample Data - Mobile Photo Reports (Transmitted from Mobile Camera)
+    const reports = [
+      {
+        no: 1,
+        id: 'MOBILE-2025-0001',
+        plate: 'WXY 123',
+        location: 'Jalan Merdeka, Johor Bahru',
+        date: '17/11/2025 09:45am',
+        violation: 'No UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1606611013016-969c19f27081?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      },
+      {
+        no: 2,
+        id: 'MOBILE-2025-0002',
+        plate: 'ABC 456',
+        location: 'Sentral Station, KL',
+        date: '17/11/2025 08:30am',
+        violation: 'Expired UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1494976866556-6812c63953c7?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      },
+      {
+        no: 3,
+        id: 'MOBILE-2025-0003',
+        plate: 'PQR 789',
+        location: 'Plaza Shopping, Subang',
+        date: '16/11/2025 04:15pm',
+        violation: 'Fake Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1485463775099-cd50b2f0dad1?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Processed'
+      },
+      {
+        no: 4,
+        id: 'MOBILE-2025-0004',
+        plate: 'DEF 012',
+        location: 'Federal Highway, KL',
+        date: '16/11/2025 11:20am',
+        violation: 'No UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe3e?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Received'
+      },
+      {
+        no: 5,
+        id: 'MOBILE-2025-0005',
+        plate: 'GHI 345',
+        location: 'Pavilion KL, Bukit Bintang',
+        date: '15/11/2025 07:50pm',
+        violation: 'Expired UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1489824904134-891ab64532f1?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      },
+      {
+        no: 6,
+        id: 'MOBILE-2025-0006',
+        plate: 'JKL 678',
+        location: 'Petaling Jaya, Selangor',
+        date: '15/11/2025 03:30pm',
+        violation: 'Damaged Vehicle',
+        photos: [
+          'https://images.unsplash.com/photo-1507950547674-3fabf9aeba26?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      },
+      {
+        no: 7,
+        id: 'MOBILE-2025-0007',
+        plate: 'MNO 901',
+        location: 'Shah Alam, Selangor',
+        date: '14/11/2025 02:15pm',
+        violation: 'No UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1606611013016-969c19f27081?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      },
+      {
+        no: 8,
+        id: 'MOBILE-2025-0008',
+        plate: 'STU 234',
+        location: 'Bangsar, KL',
+        date: '14/11/2025 10:00am',
+        violation: 'Illegal Parking',
+        photos: [
+          'https://images.unsplash.com/photo-1494976866556-6812c63953c7?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Processed'
+      },
+      {
+        no: 9,
+        id: 'MOBILE-2025-0009',
+        plate: 'VWX 567',
+        location: 'Taman Desa, KL',
+        date: '13/11/2025 06:45pm',
+        violation: 'No UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1485463775099-cd50b2f0dad1?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Received'
+      },
+      {
+        no: 10,
+        id: 'MOBILE-2025-0010',
+        plate: 'YZA 890',
+        location: 'Cyberjaya, Selangor',
+        date: '13/11/2025 01:30pm',
+        violation: 'Expired UTM Sticker',
+        photos: [
+          'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=300&fit=crop'
+        ],
+        photoCount: 1,
+        status: 'Verified'
+      }
+    ];
+
+    let selectedReport = null;
+
+    let currentEditId = null;
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      
+      data.forEach((report, index) => {
+        const row = document.createElement('tr');
+        let statusClass = 'status-' + report.status.toLowerCase();
+        let statusDot = '';
+        
+        if (report.status === 'Received') {
+          statusDot = '📥';
+        } else if (report.status === 'Processed') {
+          statusDot = '⏳';
+        } else if (report.status === 'Verified') {
+          statusDot = '✓';
+        }
+
+        row.innerHTML = `
+          <td>${report.no}</td>
+          <td>${report.id}</td>
+          <td><strong>${report.plate}</strong></td>
+          <td>${report.location}</td>
+          <td>${report.date}</td>
+          <td>${report.violation}</td>
+          <td><span class="status-badge ${statusClass}"><span class="status-dot">${statusDot}</span>${report.status}</span></td>
+          <td><span style="background: #e8f4ff; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${report.photoCount} 📸</span></td>
+        `;
+        row.style.cursor = 'pointer';
+        row.onclick = () => selectReport(report);
+        tbody.appendChild(row);
+      });
+    }
+
+    function selectReport(report) {
+      selectedReport = report;
+      // Highlight selected row
+      document.querySelectorAll('#reportTable tbody tr').forEach(tr => {
+        tr.style.background = '';
+      });
+      event.currentTarget.style.background = '#f0f8ff';
+      
+      // Show photos
+      showPhotoPreview(report);
+    }
+
+    function showPhotoPreview(report) {
+      const photoPreview = document.getElementById('photoPreview');
+      const photoInfo = document.getElementById('reportInfo');
+      const downloadBtn = document.getElementById('downloadBtn');
+      
+      if (report.photos.length > 0) {
+        photoPreview.innerHTML = `
+          <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white;">
+            <img src="${report.photos[0]}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+          </div>
+        `;
+        
+        photoInfo.innerHTML = `
+          <div style="margin-bottom: 8px;"><strong>${report.plate}</strong></div>
+          <div style="margin-bottom: 4px; color: #999; font-size: 11px;">${report.location}</div>
+          <div style="margin-bottom: 4px; color: #999; font-size: 11px;">${report.date}</div>
+          <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 11px;">
+            <strong>${report.violation}</strong><br>
+            ${report.photoCount} photo(s) received
+          </div>
+        `;
+        downloadBtn.style.display = 'block';
+      }
+    }
+
+    function downloadPhotos() {
+      if (selectedReport && selectedReport.photos.length > 0) {
+        selectedReport.photos.forEach((photo, i) => {
+          const link = document.createElement('a');
+          link.href = photo;
+          link.download = `${selectedReport.id}-photo-${i+1}.jpg`;
+          link.click();
+        });
+      }
+    }
+
+    function filterTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = reports.filter(report => 
+        report.id.toLowerCase().includes(search) || 
+        report.plate.toLowerCase().includes(search) ||
+        report.location.toLowerCase().includes(search) ||
+        report.violation.toLowerCase().includes(search)
+      );
+      renderTable(filtered);
+    }
+
+    function openModal(reportId) {
+      currentEditId = reportId;
+      document.getElementById('modalReportId').value = reportId;
+      document.getElementById('modalStatus').value = 'Processed';
+      document.getElementById('modalNotes').value = '';
+      document.getElementById('actionModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('actionModal').classList.remove('show');
+      currentEditId = null;
+    }
+
+    function saveAction() {
+      const status = document.getElementById('modalStatus').value;
+      const notes = document.getElementById('modalNotes').value;
+      
+      const report = reports.find(r => r.id === currentEditId);
+      if (report) {
+        report.status = status;
+        alert(`Report ${currentEditId} updated to ${status}`);
+        renderTable(reports);
+        closeModal();
+      }
+    }
+
+    function setActive(element, page) {
+      document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+      element.classList.add('active');
+    }
+
+    function previousPage() {
+      alert('Previous page');
+    }
+
+    function nextPage() {
+      alert('Next page');
+    }
+
+    // History data with processing notes
+    const reportHistory = reports.map((r, i) => ({
+      ...r,
+      notes: i % 3 === 0 ? 'Photo quality verified' : i % 3 === 1 ? 'Plate number confirmed' : 'Processing completed'
+    }));
+
+    // Page switching functionality
+    function switchPage(page) {
+      // Hide all pages
+      document.getElementById('dashboard-page').style.display = 'none';
+      document.getElementById('history-page').style.display = 'none';
+      
+      // Show selected page
+      if (page === 'dashboard') {
+        document.getElementById('dashboard-page').style.display = 'block';
+      } else if (page === 'history') {
+        document.getElementById('history-page').style.display = 'block';
+        renderHistoryTable(reportHistory);
+      }
+      
+      // Update sidebar active state
+      document.querySelectorAll('.sidebar-menu a').forEach(a => {
+        a.classList.remove('active');
+      });
+      event.currentTarget.classList.add('active');
+    }
+
+    function renderHistoryTable(data) {
+      const tbody = document.getElementById('historyTableBody');
+      tbody.innerHTML = '';
+      
+      data.forEach((report) => {
+        const row = document.createElement('tr');
+        let statusClass = 'status-' + report.status.toLowerCase();
+        
+        row.innerHTML = `
+          <td>${report.no}</td>
+          <td>${report.id}</td>
+          <td><strong>${report.plate}</strong></td>
+          <td>${report.location}</td>
+          <td>${report.violation}</td>
+          <td>${report.date}</td>
+          <td><span class="status-badge ${statusClass}"><span class="status-dot">●</span>${report.status}</span></td>
+          <td><span style="font-size: 11px; color: #666;">${report.notes}</span></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function filterHistoryTable() {
+      const search = document.getElementById('historySearchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('historyStatusFilter').value;
+      
+      const filtered = reportHistory.filter(report => {
+        const matchSearch = report.id.toLowerCase().includes(search) || 
+                           report.plate.toLowerCase().includes(search) ||
+                           report.location.toLowerCase().includes(search);
+        const matchStatus = !statusFilter || report.status === statusFilter;
+        return matchSearch && matchStatus;
+      });
+      
+      renderHistoryTable(filtered);
+    }
+
+    // Initialize
+    renderTable(reports);
+  </script>
+</body>
+</html>
