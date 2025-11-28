@@ -39,6 +39,7 @@ dependencies:
   ionicons: ^0.2.2
   google_sign_in: ^6.2.2
   google_nav_bar: ^5.0.7
+  flutter_dotenv: ^6.0.0
 
 
 dev_dependencies:
@@ -93,6 +94,7 @@ flutter:
     - assets/images/facebook.png
     - assets/images/car.png
     - assets/images/sus.png
+    - assets/.env
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
