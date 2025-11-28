@@ -79,3 +79,51 @@ app.*.map.json
 /Laravel/Homestead.json
 /Laravel/Homestead.yaml
 /Laravel/resources/js/firebaseConfig.js
+
+# -----------------------
+# Core Flutter/Dart (Targeting "Flutter" folder)
+# -----------------------
+/Flutter/.dart_tool/
+/Flutter/.flutter-plugins
+/Flutter/.flutter-plugins-dependencies
+/Flutter/.pub-cache/
+/Flutter/.pub/
+/Flutter/build/
+
+# Documentation
+/Flutter/doc/api/
+
+# -----------------------
+# Application Config & Secrets
+# -----------------------
+# Protect your keys and environment variables
+/Flutter/assets/.env
+/Flutter/android/key.properties
+/Flutter/android/local.properties
+
+# -----------------------
+# Android Specifics
+# -----------------------
+/Flutter/android/app/debug
+/Flutter/android/app/profile
+/Flutter/android/app/release
+/Flutter/android/.gradle/
+
+# -----------------------
+# iOS Specifics
+# -----------------------
+/Flutter/ios/Flutter/.last_build_id
+/Flutter/ios/.symlinks
+/Flutter/ios/Flutter/Generated.xcconfig
+/Flutter/ios/Flutter/flutter_export_environment.sh
+/Flutter/ios/Pods/
+/Flutter/ios/Runner/GeneratedPluginRegistrant.*
+/Flutter/ios/Runner/*.xcworkspace/contents.xcworkspacedata
+
+# Obfuscation & Symbolication
+/Flutter/app.*.symbols
+/Flutter/app.*.map.json
+/Flutter/web/
+/Flutter/macos/
+/Flutter/linux/
+/Flutter/windows/

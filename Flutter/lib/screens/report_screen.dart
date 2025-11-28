@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:utm_report_system/screens/traffic_report_screen.dart';
+import 'package:utm_report_system/screens/suspicious_report_screen.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
@@ -27,14 +29,14 @@ class ReportScreen extends StatelessWidget {
         description:
             'Report traffic violations, accidents, or parking issues on campus.',
         assetPath: 'assets/images/car.png',
-        onTap: () => _handleReportTap(context, 'Traffic incident'),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TrafficReportScreen())),
       ),
       _ReportOption(
         title: 'Report Suspicious Activity',
         description:
             'Report any suspicious behavior, security concerns, or policy violations.',
         assetPath: 'assets/images/sus.png',
-        onTap: () => _handleReportTap(context, 'Suspicious activity'),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SuspiciousReportScreen())),
       ),
     ];
 

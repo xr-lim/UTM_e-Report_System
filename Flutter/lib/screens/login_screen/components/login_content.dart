@@ -224,6 +224,8 @@ class _LoginContentState extends State<LoginContent>
         password: _signUpPasswordController.text,
       );
 
+      await AuthService().ensureUserDocument(userCredential.user);
+
       navigator.pop();
       if (!mounted) return;
 
