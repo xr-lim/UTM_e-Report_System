@@ -71,22 +71,46 @@ export default function Login({ status, canResetPassword }) {
     const handleGoogleLogin = async () => {
         try {
             const auth = getAuth(app);
+            const db = getFirestore(app);
             const provider = new GoogleAuthProvider();
 
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
 
-            // Google ID token
-            const token = await user.getIdToken();
+            // Check if user exists in Firestore and has admin role
+            const userDocRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userDocRef);
 
-            console.log("Google User:", user);
-            console.log("Token:", token);
+            if (!userSnap.exists()) {
+                // User not registered in Firestore
+                await auth.signOut();
+                alert("Access Denied: You are not registered. Please register first.");
+                router.visit(route('register'));
+                return;
+            }
 
-            alert(`Welcome ${user.displayName}! (Google login successful)`);
+            const userData = userSnap.data();
+
+            // Check if user is banned
+            if (userData.is_banned) {
+                await auth.signOut();
+                alert("Your account has been banned. Please contact the administrator.");
+                return;
+            }
+
+            // Check if user has admin role
+            if (userData.role !== 'admin') {
+                await auth.signOut();
+                alert("Access Denied: Admins only.");
+                return;
+            }
+
+            // Success - user is admin and not banned
+            console.log("Google Admin Login successful");
             router.visit(route('dashboard'));
         } catch (error) {
             console.error("Google Sign-In Error:", error);
-            alert("Failed to sign in with Google.");
+            alert("Failed to sign in with Google: " + error.message);
         }
     };
 
