@@ -35,6 +35,7 @@ Thumbs.db
 /AI/Suspicious_Identifier/__pycache__/
 /AI/gfpgan
 /AI/Suspicious_Identifier/gfpgan
+/AI/Real-ESRGAN
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -78,7 +79,6 @@ app.*.map.json
 /Laravel/storage/pail
 /Laravel/Homestead.json
 /Laravel/Homestead.yaml
-/Laravel/resources/js/firebaseConfig.js
 
 # -----------------------
 # Core Flutter/Dart (Targeting "Flutter" folder)
