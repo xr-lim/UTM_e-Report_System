@@ -7,6 +7,27 @@ import { useState, useEffect } from 'react';
 
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { app } from '@/firebaseConfig';
+import {
+  LogOut,
+  Bell,
+  Search,
+  Menu,
+  X
+} from 'lucide-react';
+
+// --- Helper Component for the Blue Header Links ---
+const NavbarItem = ({ href, active, children }) => (
+  <Link
+    href={href}
+    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+      active
+        ? 'bg-[#1B56FD] text-white shadow-md'
+        : 'text-blue-100 hover:bg-white/10 hover:text-white'
+    }`}
+  >
+    {children}
+  </Link>
+);
 
 export default function AuthenticatedLayout({ header, children }) {
     const [user, setUser] = useState(null);
@@ -37,6 +58,14 @@ export default function AuthenticatedLayout({ header, children }) {
         window.location.href = "/login";
     };
 
+    // Helper to get initials
+    const getInitials = (name) => {
+        return name
+            ? name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+            : 'U';
+    };
+
+
     if (!user) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -46,107 +75,121 @@ export default function AuthenticatedLayout({ header, children }) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 justify-between">
-                        <div className="flex">
-                            <div className="flex shrink-0 items-center">
-                                <Link href="/dashboard">
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+        <div className="min-h-screen bg-[#F4F6F9]">
+            {/* --- Top Navbar (Deep Blue) --- */}
+            <header className="bg-[#0118D8] text-white shadow-lg sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between h-16 items-center">
+                        {/* Left Section: Logo & Desktop Nav */}
+                        <div className="flex items-center">
+                            {/* Logo */}
+                            <div className="flex-shrink-0 flex items-center gap-3">
+                                <Link href="/dashboard" className="flex items-center gap-3">
+                                    <div className="bg-white p-1 rounded-lg">
+                                        <ApplicationLogo className="block h-8 w-auto fill-current text-[#0118D8]" />
+                                    </div>
+                                    <div>
+                                        <h1 className="font-bold text-lg tracking-tight leading-none">UTM ADMIN</h1>
+                                        <p className="text-blue-200 text-[10px] uppercase tracking-wider leading-none">Report System</p>
+                                    </div>
                                 </Link>
                             </div>
 
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href="/dashboard"
-                                    active={route().current('dashboard')}
-                                >
+                            {/* Desktop Navigation Links */}
+                            <div className="hidden md:ml-10 md:flex md:space-x-2">
+                                <NavbarItem href={route('dashboard')} active={route().current('dashboard')}>
                                     Dashboard
-                                </NavLink>
+                                </NavbarItem>
+                                {/* Add your other links here */}
+                                <NavbarItem href="#" active={false}>Reports</NavbarItem>
+                                <NavbarItem href="#" active={false}>Users</NavbarItem>
                             </div>
                         </div>
 
-                        {/* Desktop Menu */}
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
-                                <div className="inline-flex rounded-md">
-                                    <button
-                                        type="button"
-                                        className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
-                                    >
-                                        {user.name ?? "User"}
-                                    </button>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="ms-3 text-red-600 hover:underline"
-                                    >
-                                        Log Out
-                                    </button>
+                        {/* Right Section: Actions & Profile */}
+                        <div className="hidden md:flex items-center space-x-4">
+                            {/* Search Bar */}
+                            <div className="relative hidden lg:block">
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    className="pl-9 pr-4 py-1.5 bg-[#0012A3] border border-blue-700 rounded text-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-[#1B56FD] w-48"
+                                />
+                                <Search size={14} className="absolute left-3 top-2 text-blue-300" />
+                            </div>
+
+                            {/* Notification Bell */}
+                            <button className="relative p-1.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-full transition-colors">
+                                <Bell size={20} />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[#0118D8]"></span>
+                            </button>
+
+                            {/* User Profile & Logout */}
+                            <div className="flex items-center gap-3 pl-4 border-l border-blue-800">
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                                    <p className="text-xs text-blue-300 mt-1">{user.email}</p>
                                 </div>
+                                <div className="h-9 w-9 bg-[#1B56FD] rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#0012A3]">
+                                    {getInitials(user.name)}
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="ml-2 text-blue-300 hover:text-red-400 transition-colors"
+                                    title="Log Out"
+                                >
+                                    <LogOut size={20} />
+                                </button>
                             </div>
                         </div>
 
-                        {/* Mobile Hamburger */}
-                        <div className="-me-2 flex items-center sm:hidden">
+                        {/* Mobile Hamburger Button */}
+                        <div className="-me-2 flex items-center md:hidden">
                             <button
-                                onClick={() =>
-                                    setShowingNavigationDropdown(prev => !prev)
-                                }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                                onClick={() => setShowingNavigationDropdown((prev) => !prev)}
+                                className="inline-flex items-center justify-center rounded-md p-2 text-blue-200 hover:bg-white/10 hover:text-white focus:outline-none"
                             >
-                                <svg className="h-6 w-6" fill="none" stroke="currentColor">
-                                    <path
-                                        className={showingNavigationDropdown ? 'hidden' : 'inline-flex'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        className={showingNavigationDropdown ? 'inline-flex' : 'hidden'}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                {showingNavigationDropdown ? (
+                                    <X className="h-6 w-6" strokeWidth={2} />
+                                ) : (
+                                    <Menu className="h-6 w-6" strokeWidth={2} />
+                                )}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Mobile Menu */}
+                {/* Mobile Menu Dropdown */}
                 {showingNavigationDropdown && (
-                    <div className="sm:hidden">
-                        <div className="space-y-1 pb-3 pt-2">
-                            <ResponsiveNavLink href="/dashboard">
+                    <div className="md:hidden bg-[#0012A3] border-t border-blue-800">
+                        <div className="space-y-1 px-2 pb-3 pt-2">
+                            <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
                                 Dashboard
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink href="#" active={false}>
+                                Reports
                             </ResponsiveNavLink>
                         </div>
 
-                        <div className="border-t border-gray-200 pb-1 pt-4">
-                            <div className="px-4">
-                                <div className="text-base font-medium text-gray-800">
-                                    {user.name}
+                        <div className="border-t border-blue-800 pb-4 pt-4">
+                            <div className="flex items-center px-4">
+                                <div className="h-10 w-10 bg-[#1B56FD] rounded-full flex items-center justify-center text-white font-bold text-sm border-2 border-[#0012A3]">
+                                    {getInitials(user.name)}
                                 </div>
-                                <div className="text-sm font-medium text-gray-500">
-                                    {user.email}
+                                <div className="ml-3">
+                                    <div className="text-base font-medium text-white">{user.name}</div>
+                                    <div className="text-sm font-medium text-blue-300">{user.email}</div>
                                 </div>
                             </div>
-
                             <div className="mt-3 space-y-1">
-                                <ResponsiveNavLink
-                                    as="button"
-                                    onClick={handleLogout}
-                                >
+                                <ResponsiveNavLink as="button" onClick={handleLogout} className="text-red-200 hover:text-red-100 hover:bg-red-900/20">
                                     Log Out
                                 </ResponsiveNavLink>
                             </div>
                         </div>
                     </div>
                 )}
-            </nav>
+            </header>
 
             {header && (
                 <header className="bg-white shadow">
