@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TrafficReportScreen extends StatefulWidget {
   const TrafficReportScreen({super.key});
@@ -12,6 +15,9 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationNotesController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
+  XFile? _selectedImage;
 
   final List<String> _categories = const [
     'Accident',
@@ -85,6 +91,25 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
     );
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _selectedImage = image;
+      });
+    } catch (e) {
+      _showSnackBar('Failed to pick image. Please try again.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,8 +151,9 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
           ),
           const SizedBox(height: 12),
           _ImageUploadCard(
-            onUploadTap: () => _showSnackBar('Image picker coming soon'),
-            onCameraTap: () => _showSnackBar('Camera support coming soon'),
+            imageFile: _selectedImage == null ? null : File(_selectedImage!.path),
+            onUploadTap: () => _pickImage(ImageSource.gallery),
+            onCameraTap: () => _pickImage(ImageSource.camera),
           ),
           const SizedBox(height: 24),
           TextField(
@@ -409,10 +435,12 @@ class _ImageUploadCard extends StatelessWidget {
   const _ImageUploadCard({
     required this.onUploadTap,
     required this.onCameraTap,
+    this.imageFile,
   });
 
   final VoidCallback onUploadTap;
   final VoidCallback onCameraTap;
+  final File? imageFile;
 
   @override
   Widget build(BuildContext context) {
@@ -433,13 +461,21 @@ class _ImageUploadCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.camera_alt_outlined,
-                  size: 48,
-                  color: Colors.grey,
-                ),
-              ),
+              child: imageFile == null
+                  ? const Center(
+                      child: Icon(
+                        Icons.camera_alt_outlined,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        imageFile!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
             ),
             const SizedBox(height: 16),
             Row(
