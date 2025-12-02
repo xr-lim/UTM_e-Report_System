@@ -56,5 +56,4 @@ By integrating **AI-powered image recognition** and **real-time data sharing**, 
 ---
 
 
-    A -->|Emergency Contact| F[UTM Security Team]
 
