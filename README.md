@@ -2,7 +2,6 @@
 ### *Smart Campus Security Information Support System*  
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 ![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-TensorFlow-orange?style=for-the-badge&logo=tensorflow&logoColor=white)
@@ -56,14 +55,5 @@ By integrating **AI-powered image recognition** and **real-time data sharing**, 
 
 ---
 
-## 🧱 System Architecture
 
-```mermaid
-graph TD
-    A[Flutter Mobile App] -->|API Calls| B[.NET Backend]
-    B -->|Data Storage| C[Firebase Database]
-    B --> D[Laravel Admin Portal]
-    C --> D
-    D -->|Heatmap Visualization| E[Security Staff Dashboard]
-    A -->|Emergency Contact| F[UTM Security Team]
 
