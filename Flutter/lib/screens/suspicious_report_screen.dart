@@ -442,7 +442,6 @@ class _ImageUploadCard extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              height: 160,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(12),
