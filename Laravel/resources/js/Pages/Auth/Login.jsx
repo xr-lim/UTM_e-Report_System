@@ -45,7 +45,7 @@ export default function Login({ status, canResetPassword }) {
                 if (userData.role !== 'admin') {
                     // FAIL: Valid login, but wrong role
                     console.warn("Access Denied: User role is", userData.role);
-                    
+
                     await auth.signOut(); // Kick them out
                     setError('email', 'Access Denied: Admins only.');
                     return;
@@ -101,7 +101,7 @@ export default function Login({ status, canResetPassword }) {
             )}
 
             <h1 className="text-2xl font-bold mb-6 text-center">Log in</h1>
-            
+
             <form onSubmit={submit}>
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
@@ -120,17 +120,8 @@ export default function Login({ status, canResetPassword }) {
                     <InputError message={errors.email} className="mt-2" />
                 </div>
 
-                <div className="mt-4 flex items-center justify-between">
+                <div className="mt-4">
                     <InputLabel htmlFor="password" value="Password" />
-
-                    {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="text-sm text-blue-600 hover:underline"
-                        >
-                            Forgot password?
-                        </Link>
-                    )}
                 </div>
 
                 <div>
@@ -146,7 +137,7 @@ export default function Login({ status, canResetPassword }) {
                     <InputError message={errors.password} className="mt-2" />
                 </div>
 
-                <div className="mt-4 block">
+                <div className="mt-4 flex items-center justify-between">
                     <label className="flex items-center">
                         <Checkbox
                             name="remember"
@@ -159,6 +150,13 @@ export default function Login({ status, canResetPassword }) {
                             Remember me
                         </span>
                     </label>
+
+                    <Link
+                        href={route('password.request')}
+                        className="text-sm text-blue-600 hover:underline"
+                    >
+                        Forgot password?
+                    </Link>
                 </div>
 
                 <PrimaryButton className="mt-4 w-full justify-center" disabled={processing}>
@@ -175,7 +173,7 @@ export default function Login({ status, canResetPassword }) {
 
             {/* Google Log In button */}
             <button type="button" onClick={handleGoogleLogin} className="flex items-center justify-center w-full py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2"/>
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5 mr-2" />
                 Log in with Google
             </button>
 
