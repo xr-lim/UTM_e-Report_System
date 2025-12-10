@@ -79,6 +79,7 @@ app.*.map.json
 /Laravel/storage/pail
 /Laravel/Homestead.json
 /Laravel/Homestead.yaml
+/Laravel/mock-data-generator.js
 
 # -----------------------
 # Core Flutter/Dart (Targeting "Flutter" folder)
