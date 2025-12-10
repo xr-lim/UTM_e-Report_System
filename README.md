@@ -1,5 +1,6 @@
 # 🛰️ UTM E-Report System  
 ![Alt text for the image](assets/UTM_E_ReportSystem.png "Optional title text") 
+<!-- Image Section --> <p align="center"> <img src="assets/UTM_E_ReportSystem.png" width="450"> </p>
 ### *Smart Campus Security Information Support System*  
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
