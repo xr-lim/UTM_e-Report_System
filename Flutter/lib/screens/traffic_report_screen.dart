@@ -30,7 +30,6 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
   final List<String> _categories = const [
     'Accident',
     'Illegal Parking',
-    'Speeding',
     'Hit and Run',
     'Other',
   ];
