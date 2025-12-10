@@ -24,11 +24,12 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
   final TextEditingController _locationNotesController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
+
   XFile? _vehicleImage;
   final List<XFile> _supportingImages = [];
 
   final List<String> _categories = const [
-    'Accident',
+    'No UTM Parking Permit',
     'Illegal Parking',
     'Hit and Run',
     'Other',
