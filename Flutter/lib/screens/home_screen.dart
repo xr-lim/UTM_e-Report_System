@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:utm_report_system/screens/report_screen.dart';
+import 'package:utm_report_system/screens/emergency_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _pages = [
     ReportScreen(),
-    ReportScreen(),
+    EmergencyScreen(),
     ReportScreen(),
     ReportScreen(),
   ];
