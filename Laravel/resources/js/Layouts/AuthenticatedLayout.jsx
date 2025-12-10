@@ -101,7 +101,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                     Dashboard
                                 </NavbarItem>
                                 {/* Add your other links here */}
-                                <NavbarItem href="#" active={false}>Reports</NavbarItem>
+                                <NavbarItem href={route('reports.index')} active={route().current('reports.index')}>
+                                    Reports
+                                </NavbarItem>
                                 <NavbarItem href="#" active={false}>Users</NavbarItem>
                             </div>
                         </div>
