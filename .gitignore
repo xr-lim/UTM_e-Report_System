@@ -29,13 +29,8 @@ Thumbs.db
 .idea/
 
 # AI related
-/AI/.venv
 /AI/Image/*.jpg
 /AI/Upscaled_Results/*.jpg
-/AI/Suspicious_Identifier/__pycache__/
-/AI/gfpgan
-/AI/Suspicious_Identifier/gfpgan
-/AI/Real-ESRGAN
 
 # Flutter/Dart/Pub related
 **/doc/api/
