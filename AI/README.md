@@ -254,7 +254,7 @@ curl -X POST "http://127.0.0.1:8000/plate" \
 
 Malaysian plates come in two styles:
 - **White background** with black text (standard)
-- **Black background** with white text (commercial/taxi)
+- **Black background** with white text (EV cars)
 
 The system tries **both normal and inverted** images, then picks the result with the highest confidence. This dual-mode approach ensures accurate OCR regardless of plate color scheme.
 
