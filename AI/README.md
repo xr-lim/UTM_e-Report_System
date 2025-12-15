@@ -291,12 +291,12 @@ All weights are pre-downloaded in `models/`:
 
 ## 🧪 Testing
 
-Sample images are provided in the `Image/` folder:
+Put sample in the `Image/` folder for testing purpose:
 
 ```bash
 # Test face upscaling
-curl -X POST "http://127.0.0.1:8000/face" -F "file=@Image/ivan.jpg" -o test.jpg
+curl -X POST "http://127.0.0.1:8000/face" -F "file=@Image/sample_person.jpg" -o test.jpg
 
 # Test plate identification
-curl -X POST "http://127.0.0.1:8000/plate" -F "file=@Image/carPlate.jpg"
+curl -X POST "http://127.0.0.1:8000/plate" -F "file=@Image/sample_carPlate.jpg"
 ```
