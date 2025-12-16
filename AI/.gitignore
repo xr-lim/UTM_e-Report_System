@@ -1,0 +1,91 @@
+# ==================================================
+# UTM Report System AI Service - .gitignore
+# ==================================================
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ----- Virtual Environment -----
+.venv/
+venv/
+ENV/
+env/
+.env
+*.env
+
+# ----- IDE / Editor -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ----- Jupyter Notebooks -----
+.ipynb_checkpoints/
+*.ipynb
+
+# ----- Testing -----
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# ----- AI/ML Models (large files) -----
+# Note: Keep model weights in the repo if needed for deployment
+# Uncomment these if using Git LFS or storing models elsewhere:
+models/gfpgan/
+models/realesrgan/
+# models/Yolov8n/
+
+# ----- YOLO Training Outputs -----
+runs/
+
+# ----- Temporary & Output Files -----
+*.tmp
+*.temp
+*.log
+Upscaled_Results/
+Test/output/
+
+# ----- OS Generated -----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ----- uv / pip -----
+# Keep uv.lock for reproducibility, but ignore requirements.txt if auto-generated
+requirements.txt
+
+# ----- Secrets & Config -----
+*.pem
+*.key
+secrets.json
+config.local.py

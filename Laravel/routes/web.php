@@ -19,6 +19,11 @@ Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 })->name('register');
 
+//Register to verify email page
+Route::get('/verify-email', function () {
+    return Inertia::render('Auth/VerifyEmail');
+})->name('verify-email');
+
 // ------------------------------
 // After login → Admin Dashboard
 // ------------------------------
@@ -26,8 +31,7 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('dashboard');
 
-//Register to verify email page
-Route::get('/verify-email', function () {
-    return Inertia::render('Auth/VerifyEmail');
-})->name('verify-email');
+Route::get('/reports', function () {
+    return Inertia::render('Reports');
+})->name('reports.index');
 
