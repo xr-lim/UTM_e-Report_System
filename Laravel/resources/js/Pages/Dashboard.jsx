@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { 
@@ -13,16 +14,7 @@ import {
     Timestamp
 } from "firebase/firestore";
 import { auth, app } from "@/firebaseConfig";
-import React, { useState, useEffect } from 'react';
-import { 
-  AlertTriangle, 
-  Bell, 
-  Car,
-  Eye,
-  MapPin,
-  MessageSquare, 
-  Filter
-} from 'lucide-react';
+import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare } from 'lucide-react';
 
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
