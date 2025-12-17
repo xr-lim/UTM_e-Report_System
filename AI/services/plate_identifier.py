@@ -123,7 +123,7 @@ class CarPlateIdentifier:
             logger.error(f"YOLO detection failed: {e}")
             return []
     
-    def _crop_plate(self, image: np.ndarray, box: tuple, padding: int = 10) -> np.ndarray:
+    def _crop_plate(self, image: np.ndarray, box: tuple, padding: int = 15) -> np.ndarray:
         """
         Crop the plate region from the image with padding.
         """
@@ -140,6 +140,47 @@ class CarPlateIdentifier:
         logger.info(f"Cropped plate region: {crop.shape}")
         
         return crop
+    
+    def _format_malaysian_plate(self, raw_text: str) -> str:
+        """
+        Format raw OCR text into Malaysian plate format.
+        
+        Malaysian plates have letters separate from digits:
+        - VLN7728 -> VLN 7728 (prefix + digits)
+        - AAS2929 -> AAS 2929 (prefix + digits)
+        - S2293N -> S 2293 N (prefix + digits + suffix)
+        
+        Args:
+            raw_text: Raw OCR text without spaces
+            
+        Returns:
+            Formatted plate string with proper spacing
+        """
+        letters_prefix = []
+        digits = []
+        letters_suffix = []
+        
+        in_digits = False
+        for char in raw_text.upper():
+            if char.isalpha():
+                if in_digits:
+                    letters_suffix.append(char)
+                else:
+                    letters_prefix.append(char)
+            elif char.isdigit():
+                in_digits = True
+                digits.append(char)
+        
+        # Build formatted plate with spaces
+        parts = []
+        if letters_prefix:
+            parts.append(''.join(letters_prefix))
+        if digits:
+            parts.append(''.join(digits))
+        if letters_suffix:
+            parts.append(''.join(letters_suffix))
+        
+        return ' '.join(parts)
     
     def _process_and_ocr(self, crop: np.ndarray) -> tuple[str | None, float | None]:
         """
@@ -162,8 +203,8 @@ class CarPlateIdentifier:
         # Convert to grayscale
         gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
         
-        # Upscale for better OCR (2x)
-        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        # Upscale for better OCR (3x for better letter recognition)
+        gray = cv2.resize(gray, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
         
         # Create inverted version
         inverted = cv2.bitwise_not(gray)
@@ -229,25 +270,31 @@ class CarPlateIdentifier:
             if not results:
                 return None, None
             
-            # Collect all results
-            all_results = []
+            # Filter and collect all results with bbox info for sorting
+            valid_results = []
             for (bbox, text, confidence) in results:
                 # Filter out very low confidence results
                 if confidence > 0.1:
-                    all_results.append((text, confidence))
+                    valid_results.append((bbox, text, confidence))
             
-            if not all_results:
+            if not valid_results:
                 return None, None
             
-            # Select the single best result based on confidence
-            best_result = max(all_results, key=lambda x: x[1])
-            best_text = best_result[0].strip().upper()
-            best_confidence = best_result[1]
+            # Sort by horizontal position (left to right) using bbox x-coordinate
+            # bbox format: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
+            valid_results.sort(key=lambda x: x[0][0][0])
             
-            # Clean up the plate text (remove spaces and special characters)
-            cleaned_text = ''.join(c for c in best_text if c.isalnum())
+            # Combine all text segments
+            combined_text = ''.join(text.strip() for (bbox, text, confidence) in valid_results)
+            avg_confidence = sum(conf for (bbox, text, conf) in valid_results) / len(valid_results)
             
-            return cleaned_text, best_confidence
+            # Clean up (remove spaces and special characters, keep alphanumeric)
+            cleaned_text = ''.join(c for c in combined_text.upper() if c.isalnum())
+            
+            # Format as Malaysian plate (letters space digits space suffix)
+            formatted_plate = self._format_malaysian_plate(cleaned_text)
+            
+            return formatted_plate, avg_confidence
             
         except Exception as e:
             logger.debug(f"OCR failed: {e}")
