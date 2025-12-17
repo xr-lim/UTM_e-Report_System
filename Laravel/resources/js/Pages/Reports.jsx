@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { 
     getFirestore, 
@@ -12,8 +12,8 @@ import {
     orderBy, 
     where
 } from "firebase/firestore";
-import { auth, app } from "@/firebaseConfig";
-import { LogOut, Car, Eye, Filter, Edit, Search } from 'lucide-react';
+import { app } from "@/firebaseConfig";
+import { Car, Eye, Filter, View } from 'lucide-react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 // --- Initialize Firebase Services ---
@@ -62,7 +62,7 @@ const fetchReportDetails = async (reportData) => {
 };
 
 // --- Report Table Component (Optimized for Reports Page) ---
-const ReportsTable = ({ reports, onEdit, filterType, onFilterChange }) => {
+const ReportsTable = ({ reports, onView, filterType, onFilterChange }) => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const filterRef = useRef(null);
     
@@ -158,9 +158,9 @@ const ReportsTable = ({ reports, onEdit, filterType, onFilterChange }) => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <PrimaryButton onClick={() => onEdit(report.id)} className="px-3 py-1.5 justify-center">
-                                            <Edit size={14} className="mr-2" />
-                                            Edit
+                                        <PrimaryButton onClick={() => onView(report.id)} className="px-3 py-1.5 justify-center">
+                                            View
+                                            <View size={18} className="ml-2" />
                                         </PrimaryButton>
                                     </td>
                                 </tr>
@@ -232,10 +232,10 @@ export default function Reports({ auth }) {
         return () => unsubscribe();
     }, [filterType]);
 
-    const handleEditReport = (reportId) => {
+    const handleViewReport = (reportId) => {
         // Redirect to a dedicated view/edit route
-        alert(`Navigating to edit report: ${reportId}`);
-        // router.visit(route('reports.edit', reportId)); 
+        alert(`Navigating to view report: ${reportId}`);
+        router.visit(route('report.view', reportId)); 
     };
 
     return (
@@ -254,7 +254,7 @@ export default function Reports({ auth }) {
                     ) : (
                         <ReportsTable 
                             reports={reports} 
-                            onEdit={handleEditReport} 
+                            onView={handleViewReport} 
                             filterType={filterType}
                             onFilterChange={setFilterType}
                         />
