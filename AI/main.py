@@ -159,6 +159,13 @@ async def identify_plate(file: UploadFile = File(...)):
 
 
 if __name__ == "__main__":
+    import socket
+    # Get local IP address for display
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    
     print("Starting UTM Report System AI API...")
-    print("Swagger UI: http://127.0.0.1:8000/docs")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    print(f"Local Swagger UI: http://127.0.0.1:8000/docs")
+    print(f"Network Swagger UI: http://{local_ip}:8000/docs")
+    print(f"Other devices on the same WiFi can access via: http://{local_ip}:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

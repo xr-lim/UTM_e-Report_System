@@ -35,3 +35,7 @@ Route::get('/reports', function () {
     return Inertia::render('Reports');
 })->name('reports.index');
 
+Route::get('/reports/{reportId}', function ($reportId) {
+    // Pass the report ID as a prop to the React component
+    return Inertia::render('ReportDetail', ['reportId' => $reportId]);
+})->name('report.view');

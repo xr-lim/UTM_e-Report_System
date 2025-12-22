@@ -123,6 +123,9 @@ This fine-tuning ensures the model performs significantly better on Malaysian pl
 # Navigate to AI folder
 cd AI
 
+# Install uv (if not already installed)
+pip install uv
+
 # Create virtual environment
 uv venv
 
