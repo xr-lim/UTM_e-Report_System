@@ -168,11 +168,15 @@ const RecentTable = ({ reports }) => (
             </tr>
           ) : (
             reports.map((report) => (
-              <tr key={report.id} className="hover:bg-blue-50/50 transition-colors group cursor-pointer">
+              <tr
+                key={report.id}
+                className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
+                onClick={() => router.visit(route('report.view', { reportId: report.id }))}
+              >
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${report.status.toLowerCase() === 'resolved' ? 'bg-green-100 text-green-700' :
-                      report.status.toLowerCase() === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                        'bg-gray-100 text-gray-600'
+                    report.status.toLowerCase() === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                      'bg-gray-100 text-gray-600'
                     }`}>
                     {report.status.toLowerCase() === 'pending' && <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5 animate-pulse"></div>}
                     {report.status}
@@ -198,7 +202,13 @@ const RecentTable = ({ reports }) => (
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering tr onClick
+                      router.visit(route('report.view', { reportId: report.id }));
+                    }}
+                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md"
+                  >
                     View Details
                   </button>
                 </td>
