@@ -22,7 +22,23 @@ if (!isset($input['message'])) {
     exit;
 }
 
-$apiKey = 'sk-0c07556a28e243869386f17f7b6fcb02';
+// Read API key from environment - you need to set DEEPSEEK_API_KEY in your .env file
+$envFile = __DIR__ . '/../.env';
+$apiKey = '';
+if (file_exists($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos($line, 'DEEPSEEK_API_KEY=') === 0) {
+            $apiKey = trim(substr($line, strlen('DEEPSEEK_API_KEY=')));
+            break;
+        }
+    }
+}
+
+if (empty($apiKey)) {
+    echo json_encode(['success' => false, 'message' => 'API key not configured']);
+    exit;
+}
 
 $systemPrompt = 'You are a helpful assistant for UTM Report System. You help campus staff and security personnel understand how to handle various incidents and provide penalty recommendations.
 
