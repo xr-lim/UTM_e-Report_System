@@ -14,7 +14,9 @@ import {
     Timestamp
 } from "firebase/firestore";
 import { auth, app } from "@/firebaseConfig";
-import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare, View } from 'lucide-react';
+import PrimaryButton from '@/Components/PrimaryButton';
+import ReportHeatmap from '@/Components/ReportHeatmap';
 
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
@@ -153,7 +155,7 @@ const RecentTable = ({ reports }) => (
         <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-500 tracking-wider">
           <tr>
             <th className="px-6 py-4">Status</th>
-            <th className="px-6 py-4">Category</th>
+            <th className="px-6 py-4">Type</th>
             <th className="px-6 py-4">Time</th>
             <th className="px-6 py-4">Reporter</th>
             <th className="px-6 py-4">Details</th>
@@ -180,10 +182,10 @@ const RecentTable = ({ reports }) => (
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center font-medium ${
-                    report.category === 'Traffic' ? 'text-blue-700' : 'text-red-700'
+                    report.type === 'Traffic' ? 'text-blue-700' : 'text-red-700'
                   }`}>
-                    {report.category === 'Traffic' ? <Car size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
-                    {report.category}
+                    {report.type === 'Traffic' ? <Car size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
+                    {report.type}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-gray-500 font-mono text-xs">{report.timeAgo}</td>
@@ -191,17 +193,18 @@ const RecentTable = ({ reports }) => (
                 <td className="px-6 py-4">
                   <div className="font-medium text-gray-900">{report.title}</div>
                   <div className="text-xs text-gray-400">ID: {report.id}</div>
-                  {report.category === 'Traffic' && report.plateNo && (
+                  {report.type === 'Traffic' && report.plateNo && (
                       <div className="text-xs text-blue-600 font-bold mt-1">Plate No: {report.plateNo}</div>
                   )}
-                  {report.category === 'Suspicious' && (
+                  {report.type === 'Suspicious' && (
                       <div className="text-xs text-red-600 mt-1">{''}</div>
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md">
-                    View Details
-                  </button>
+                  <PrimaryButton onClick={() => router.visit(route('report.view', report.id))} className="px-3 py-1.5 justify-center">
+                      View
+                      <View size={18} className="ml-2" />
+                  </PrimaryButton>
                 </td>
               </tr>
             ))
@@ -376,10 +379,11 @@ export default function Dashboard() {
                 return {
                     id: doc.id,
                     title:  fetchedDetails.fullDescription.substring(0, 50) || 'New Report', 
-                    category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+                    type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
                     status: data.status || 'Pending',
                     reporterName: data.reporter.id || 'Anonymous',
                     timeAgo: formattedDateTime,
+                    location: data.location,
 
                     // --- Dynamic Fields Added to Final Object ---
                     ...fetchedDetails,
@@ -445,7 +449,15 @@ export default function Dashboard() {
                 {/* Row 2: Heatmap & Distribution Chart */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 min-h-[400px]">
-                        <HeatmapSection />
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <div className="mb-4">
+                                <h3 className="font-bold text-gray-800 text-lg">Incident Heatmap</h3>
+                                <p className="text-xs text-gray-500">Visual density of reported locations across campus</p>
+                            </div>
+                            
+                            {/* Pass your reports state here */}
+                            <ReportHeatmap reports={reports} />
+                        </div>
                     </div>
                     <div className="min-h-[400px]">
                         <DistributionChart 
