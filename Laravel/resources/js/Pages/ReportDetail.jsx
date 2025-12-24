@@ -208,7 +208,50 @@ export default function ReportDetail({ auth, reportId }) {
                         
                         {/* --- COLUMN 1 & 2: Details and Image --- */}
                         <div className="lg:col-span-2 space-y-8">
+
+                            {/* --- PRIMARY IMAGE SECTION --- */}
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Primary Evidence</h3>
+                                {report.image_with_cp ? (
+                                    <div className="rounded-lg overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                                        <img 
+                                            src={report.image_with_cp} 
+                                            alt="Main report evidence" 
+                                            className="w-full h-auto max-h-[500px] object-contain mx-auto"
+                                            onError={(e) => { e.target.src = 'https://placehold.co/600x400?text=Image+Not+Found'; }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 italic">
+                                        No primary image provided.
+                                    </div>
+                                )}
+                            </div>
                             
+                            {/* --- SUPPORTING IMAGES GRID --- */}
+                            {report.supporting_image && report.supporting_image.length > 0 && (
+                                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                                        Supporting Images ({report.supporting_image.length})
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {report.supporting_image.map((url, index) => (
+                                            <div key={index} className="aspect-video rounded-lg overflow-hidden border border-gray-100 group relative cursor-pointer">
+                                                <img 
+                                                    src={url} 
+                                                    alt={`Support ${index + 1}`} 
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                />
+                                                {/* Optional: Overlay on hover */}
+                                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <span className="text-white text-xs font-bold">View Large</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Report Status Management */}
                             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
                                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
