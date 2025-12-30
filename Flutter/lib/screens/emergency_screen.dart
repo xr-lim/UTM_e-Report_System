@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:utm_report_system/screens/contact_list_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const _primaryColor = Color(0xFF42A5F5);
@@ -26,8 +27,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
   Future<_EmergencyContacts> _fetchContacts() async {
     try {
-      final contactsCollection =
-          FirebaseFirestore.instance.collection('contact_list');
+      final contactsCollection = FirebaseFirestore.instance.collection(
+        'contact_list',
+      );
       final results = await Future.wait([
         contactsCollection.doc('PKU').get(),
         contactsCollection.doc('Security').get(),
@@ -40,7 +42,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       final securityData = securityDoc.data();
 
       debugPrint('PKU doc exists: ${pkuDoc.exists}, data: $pkuData');
-      debugPrint('Security doc exists: ${securityDoc.exists}, data: $securityData');
+      debugPrint(
+        'Security doc exists: ${securityDoc.exists}, data: $securityData',
+      );
 
       return _EmergencyContacts(
         pusatName: (pkuData?['name'] as String?)?.trim(),
@@ -61,34 +65,35 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Phone number for $label is not available yet.')),
+        SnackBar(
+          content: Text('Phone number for $label is not available yet.'),
+        ),
       );
       return;
     }
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirm Call'),
-        content: Text('Do you want to call $label at $phoneNumber?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: _primaryColor,
-            ),
-            child: const Text('Cancel'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Confirm Call'),
+            content: Text('Do you want to call $label at $phoneNumber?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                style: TextButton.styleFrom(foregroundColor: _primaryColor),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Call'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: _primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Call'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed != true) {
@@ -140,10 +145,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             children: [
               Text(
                 'Reach out to UTM emergency contacts immediately.',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 24),
               _EmergencyContactCard(
@@ -152,10 +156,11 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     'Medical emergencies and urgent healthcare support for campus community.',
                 icon: Icons.local_hospital,
                 phoneNumber: contacts.pusatPhone,
-                onTap: () => _handleCallRequest(
-                  label: contacts.pusatName,
-                  phoneNumber: contacts.pusatPhone,
-                ),
+                onTap:
+                    () => _handleCallRequest(
+                      label: contacts.pusatName,
+                      phoneNumber: contacts.pusatPhone,
+                    ),
               ),
               const SizedBox(height: 16),
               _EmergencyContactCard(
@@ -164,10 +169,32 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     'Security emergencies, incidents, and campus safety assistance.',
                 icon: Icons.shield,
                 phoneNumber: contacts.securityPhone,
-                onTap: () => _handleCallRequest(
-                  label: contacts.securityName,
-                  phoneNumber: contacts.securityPhone,
+                onTap:
+                    () => _handleCallRequest(
+                      label: contacts.securityName,
+                      phoneNumber: contacts.securityPhone,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ContactListScreen(),
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: _accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                icon: const Icon(Icons.contact_phone),
+                label: const Text('View full contact list'),
               ),
             ],
           );
@@ -183,8 +210,8 @@ class _EmergencyContacts {
     this.pusatPhone,
     String? securityName,
     this.securityPhone,
-  })  : pusatName = pusatName ?? _defaultPusatName,
-        securityName = securityName ?? _defaultSecurityName;
+  }) : pusatName = pusatName ?? _defaultPusatName,
+       securityName = securityName ?? _defaultSecurityName;
 
   final String pusatName;
   final String? pusatPhone;
@@ -213,10 +240,7 @@ class _EmergencyContactCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: _backgroundColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: _primaryColor.withOpacity(0.12),
-          width: 1.2,
-        ),
+        border: Border.all(color: _primaryColor.withOpacity(0.12), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: _primaryColor.withOpacity(0.08),
@@ -232,47 +256,38 @@ class _EmergencyContactCard extends StatelessWidget {
           CircleAvatar(
             radius: 28,
             backgroundColor: _accentColor.withOpacity(0.16),
-            child: Icon(
-              icon,
-              size: 28,
-              color: _primaryColor,
-            ),
+            child: Icon(icon, size: 28, color: _primaryColor),
           ),
           const SizedBox(height: 16),
           Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
             description,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              Icon(
-                Icons.phone,
-                size: 20,
-                color: Colors.grey[700],
-              ),
+              Icon(Icons.phone, size: 20, color: Colors.grey[700]),
               const SizedBox(width: 8),
               Text(
                 phoneNumber?.isNotEmpty == true
                     ? phoneNumber!
                     : 'Phone number not available',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: phoneNumber?.isNotEmpty == true
+                  color:
+                      phoneNumber?.isNotEmpty == true
                           ? Colors.black87
                           : Colors.grey[500],
-                      fontWeight: FontWeight.w600,
-                    ),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -284,8 +299,10 @@ class _EmergencyContactCard extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: _primaryColor,
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 textStyle: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -314,19 +331,14 @@ class _EmergencyError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.wifi_off,
-              size: 48,
-              color: _primaryColor,
-            ),
+            const Icon(Icons.wifi_off, size: 48, color: _primaryColor),
             const SizedBox(height: 16),
             Text(
               'We could not load emergency contacts.',
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey[700]),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -343,4 +355,3 @@ class _EmergencyError extends StatelessWidget {
     );
   }
 }
-

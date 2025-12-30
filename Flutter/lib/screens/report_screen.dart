@@ -29,14 +29,22 @@ class ReportScreen extends StatelessWidget {
         description:
             'Report traffic violations, accidents, or parking issues on campus.',
         assetPath: 'assets/images/car.png',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TrafficReportScreen())),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TrafficReportScreen()),
+            ),
       ),
       _ReportOption(
         title: 'Report Suspicious Activity',
         description:
             'Report any suspicious behavior, security concerns, or policy violations.',
         assetPath: 'assets/images/sus.png',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SuspiciousReportScreen())),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SuspiciousReportScreen()),
+            ),
       ),
     ];
 
@@ -62,10 +70,9 @@ class ReportScreen extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(
                 'Logged in as ${user.email ?? 'Unknown email'}',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey[700]),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
               ),
             ),
           for (final option in options) ...[
@@ -126,16 +133,17 @@ class _ReportCard extends StatelessWidget {
                 child: Image.asset(
                   option.assetPath,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.grey,
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
               ),
             ),
@@ -146,18 +154,16 @@ class _ReportCard extends StatelessWidget {
                 children: [
                   Text(
                     option.title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     option.description,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.grey[600]),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
               ),
