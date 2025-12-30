@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ChatBox from '@/Components/ChatBox';
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -54,7 +55,7 @@ const HeatmapSection = () => (
         </h3>
         <p className="text-sm text-gray-500 mt-1 ml-7 font-medium">Visualizing report density across campus</p>
       </div>
-
+      
       {/* Filter Toggles */}
       <div className="flex bg-gray-100 p-1 rounded-xl">
         <button className="flex items-center px-4 py-2 bg-white rounded-lg text-xs font-semibold text-blue-700 border border-gray-200">
@@ -67,13 +68,13 @@ const HeatmapSection = () => (
         </button>
       </div>
     </div>
-
+    
     <div className="relative flex-1 bg-gray-50 min-h-[350px] overflow-hidden group">
       {/* Map Base - Grid Pattern */}
       <div className="absolute inset-0 bg-[#e8ecf2]"
         style={{ backgroundImage: 'linear-gradient(#d1d5db 1px, transparent 1px), linear-gradient(90deg, #d1d5db 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
       </div>
-
+      
       {/* Campus Landmarks */}
       <div className="absolute top-10 left-20 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 uppercase tracking-widest">Main Library</div>
       <div className="absolute bottom-20 right-32 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 uppercase tracking-widest">Student Union</div>
@@ -90,7 +91,7 @@ const HeatmapSection = () => (
         <div className="w-24 h-24 bg-blue-600/20 rounded-full blur-xl"></div>
         <MapPin size={24} className="absolute top-8 left-8 text-blue-700" fill="#1B56FD" />
       </div>
-
+      
       {/* Controls Overlay */}
       <div className="absolute bottom-4 right-4 bg-white border border-gray-200 p-1.5 rounded-xl flex flex-col space-y-1">
         <button className="w-7 h-7 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 font-bold transition-colors">+</button>
@@ -202,9 +203,8 @@ const RecentTable = ({ reports }) => (
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center font-medium ${
-                    report.category === 'Traffic' ? 'text-blue-700' : 'text-red-700'
-                  }`}>
+                  <span className={`inline-flex items-center font-medium ${report.category === 'Traffic' ? 'text-blue-700' : 'text-red-700'
+                    }`}>
                     {report.category === 'Traffic' ? <Car size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
                     {report.category}
                   </span>
@@ -215,14 +215,20 @@ const RecentTable = ({ reports }) => (
                   <div className="font-medium text-gray-900">{report.title}</div>
                   <div className="text-xs text-gray-400">ID: {report.id}</div>
                   {report.category === 'Traffic' && report.plateNo && (
-                      <div className="text-xs text-blue-600 font-bold mt-1">Plate No: {report.plateNo}</div>
+                    <div className="text-xs text-blue-600 font-bold mt-1">Plate No: {report.plateNo}</div>
                   )}
                   {report.category === 'Suspicious' && (
-                      <div className="text-xs text-red-600 mt-1">{''}</div>
+                    <div className="text-xs text-red-600 mt-1">{''}</div>
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering tr onClick
+                      router.visit(route('report.view', { reportId: report.id }));
+                    }}
+                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md"
+                  >
                     View Details
                   </button>
                 </td>
@@ -395,14 +401,14 @@ export default function Dashboard() {
           hour12: true, // Use AM/PM format
         });
 
-                // Safely map and flatten Firestore objects
-                return {
-                    id: doc.id,
-                    title:  fetchedDetails.fullDescription.substring(0, 50) || 'New Report', 
-                    category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-                    status: data.status || 'Pending',
-                    reporterName: data.reporter.id || 'Anonymous',
-                    timeAgo: formattedDateTime,
+        // Safely map and flatten Firestore objects
+        return {
+          id: doc.id,
+          title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
+          category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+          status: data.status || 'Pending',
+          reporterName: data.reporter.id || 'Anonymous',
+          timeAgo: formattedDateTime,
 
           // --- Dynamic Fields Added to Final Object ---
           ...fetchedDetails,
@@ -465,19 +471,19 @@ export default function Dashboard() {
           ))}
         </div>
 
-                {/* Row 2: Heatmap & Distribution Chart */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 min-h-[400px]">
-                        <HeatmapSection />
-                    </div>
-                    <div className="min-h-[400px]">
-                        <DistributionChart 
-                          totalReports={distributionData.totalReports} 
-                          trafficCount={distributionData.trafficCount} 
-                          suspiciousCount={distributionData.suspiciousCount}
-                        />
-                    </div>
-                </div>
+        {/* Row 2: Heatmap & Distribution Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 min-h-[400px]">
+            <HeatmapSection />
+          </div>
+          <div className="min-h-[400px]">
+            <DistributionChart
+              totalReports={distributionData.totalReports}
+              trafficCount={distributionData.trafficCount}
+              suspiciousCount={distributionData.suspiciousCount}
+            />
+          </div>
+        </div>
 
         {/* Row 3: Recent Activity Table */}
         <RecentTable reports={reports} />
@@ -492,11 +498,14 @@ export default function Dashboard() {
       <Head title="Dashboard" />
 
       {/* Main Content Area */}
-      <div className="py-12 min-h-screen bg-[#F4F6F9] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-[#F4F6F9] to-[#F4F6F9]">
+      <div className="py-8 min-h-screen bg-[#F4F6F9]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
           {renderContent()}
         </div>
       </div>
+
+      {/* AI Incident Assistant ChatBox */}
+      <ChatBox />
     </AuthenticatedLayout>
   );
 }
