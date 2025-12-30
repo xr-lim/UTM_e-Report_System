@@ -76,7 +76,7 @@ export default function AuthenticatedLayout({ header, children }) {
     return (
         <div className="min-h-screen bg-[#F4F6F9]">
             {/* --- Top Navbar (Deep Blue) --- */}
-            <header className="bg-[#0118D8] text-white shadow-lg sticky top-0 z-50">
+            <header className="bg-[#0118D8] text-white shadow-lg sticky top-0 z-[1001]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16 items-center">
                         {/* Left Section: Logo & Desktop Nav */}
@@ -108,15 +108,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         {/* Right Section: Actions & Profile */}
                         <div className="hidden md:flex items-center space-x-4">
-                            {/* Search Bar */}
-                            <div className="relative hidden lg:block">
-                                <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    className="pl-9 pr-4 py-1.5 bg-[#0012A3] border border-blue-700 rounded text-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-[#1B56FD] w-48"
-                                />
-                                <Search size={14} className="absolute left-3 top-2 text-blue-300" />
-                            </div>
+                            
 
                             {/* Notification Bell */}
                             <button className="relative p-1.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-full transition-colors">

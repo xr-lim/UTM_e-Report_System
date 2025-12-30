@@ -14,8 +14,10 @@ import {
   Timestamp
 } from "firebase/firestore";
 import { auth, app } from "@/firebaseConfig";
-import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare, ChevronRight, User } from 'lucide-react';
+import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare, ChevronRight, User, View } from 'lucide-react';
 import { GlassBadge } from '@/Components/Glass/GlassBadge';
+import PrimaryButton from '@/Components/PrimaryButton';
+import ReportHeatmap from '@/Components/ReportHeatmap';
 
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
@@ -154,10 +156,10 @@ const RecentTable = ({ reports }) => (
       </button>
     </div>
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr className="border-b border-gray-100 text-[11px] uppercase tracking-widest font-semibold text-gray-400">
-            <th className="px-8 py-4">Status</th>
+      <table className="w-full text-left text-sm text-gray-600">
+        <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-500 tracking-wider">
+          <tr>
+            <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4">Category</th>
             <th className="px-6 py-4">Time</th>
             <th className="px-6 py-4">Reporter</th>
@@ -199,26 +201,30 @@ const RecentTable = ({ reports }) => (
                     {report.timeAgo}
                   </span>
                 </td>
-                <td className="px-6 py-5 align-middle">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400">
-                      <User size={12} />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">{report.reporterName || 'Anonymous'}</span>
-                  </div>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center font-medium ${
+                    report.category === 'Traffic' ? 'text-blue-700' : 'text-red-700'
+                  }`}>
+                    {report.category === 'Traffic' ? <Car size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
+                    {report.category}
+                  </span>
                 </td>
-                <td className="px-6 py-5 align-middle max-w-xs">
-                  <div>
-                    <div className="font-medium text-sm text-gray-900 truncate" title={report.title}>
-                      {report.title}
-                    </div>
-                    {report.category === 'Traffic' && report.plateNo && report.plateNo !== 'N/A' && (
-                      <div className="text-xs font-mono font-medium text-blue-600 mt-1 bg-blue-50/50 inline-block px-1.5 rounded">{report.plateNo}</div>
-                    )}
-                  </div>
+                <td className="px-6 py-4 text-gray-500 font-mono text-xs">{report.timeAgo}</td>
+                <td className="px-6 py-4 font-medium text-gray-900">{report.reporterName || 'N/A'}</td>
+                <td className="px-6 py-4">
+                  <div className="font-medium text-gray-900">{report.title}</div>
+                  <div className="text-xs text-gray-400">ID: {report.id}</div>
+                  {report.category === 'Traffic' && report.plateNo && (
+                      <div className="text-xs text-blue-600 font-bold mt-1">Plate No: {report.plateNo}</div>
+                  )}
+                  {report.category === 'Suspicious' && (
+                      <div className="text-xs text-red-600 mt-1">{''}</div>
+                  )}
                 </td>
-                <td className="px-8 py-5 align-middle text-right">
-                  <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors ml-auto" />
+                <td className="px-6 py-4 text-right">
+                  <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md">
+                    View Details
+                  </button>
                 </td>
               </tr>
             ))
@@ -389,14 +395,14 @@ export default function Dashboard() {
           hour12: true, // Use AM/PM format
         });
 
-        // Safely map and flatten Firestore objects
-        return {
-          id: doc.id,
-          title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
-          category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-          status: data.status || 'Pending',
-          reporterName: data.reporter.id || 'Anonymous',
-          timeAgo: formattedDateTime,
+                // Safely map and flatten Firestore objects
+                return {
+                    id: doc.id,
+                    title:  fetchedDetails.fullDescription.substring(0, 50) || 'New Report', 
+                    category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+                    status: data.status || 'Pending',
+                    reporterName: data.reporter.id || 'Anonymous',
+                    timeAgo: formattedDateTime,
 
           // --- Dynamic Fields Added to Final Object ---
           ...fetchedDetails,
@@ -459,19 +465,19 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Row 2: Heatmap & Distribution Chart */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 min-h-[400px]">
-            <HeatmapSection />
-          </div>
-          <div className="min-h-[400px]">
-            <DistributionChart
-              totalReports={distributionData.totalReports}
-              trafficCount={distributionData.trafficCount}
-              suspiciousCount={distributionData.suspiciousCount}
-            />
-          </div>
-        </div>
+                {/* Row 2: Heatmap & Distribution Chart */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 min-h-[400px]">
+                        <HeatmapSection />
+                    </div>
+                    <div className="min-h-[400px]">
+                        <DistributionChart 
+                          totalReports={distributionData.totalReports} 
+                          trafficCount={distributionData.trafficCount} 
+                          suspiciousCount={distributionData.suspiciousCount}
+                        />
+                    </div>
+                </div>
 
         {/* Row 3: Recent Activity Table */}
         <RecentTable reports={reports} />

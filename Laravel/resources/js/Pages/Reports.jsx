@@ -372,7 +372,7 @@ export default function Reports() {
 
     const handleViewReport = (reportId) => {
         // Redirect to a dedicated view/edit route
-        // alert(`Navigating to view report: ${reportId}`);
+        alert(`Navigating to view report: ${reportId}`);
         router.visit(route('report.view', reportId));
     };
 
