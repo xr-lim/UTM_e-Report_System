@@ -45,7 +45,7 @@ export default function Login({ status, canResetPassword }) {
                 if (userData.role !== 'admin') {
                     // FAIL: Valid login, but wrong role
                     console.warn("Access Denied: User role is", userData.role);
-                    
+                   
                     await auth.signOut(); // Kick them out
                     setError('email', 'Access Denied: Admins only.');
                     return;
@@ -93,7 +93,6 @@ export default function Login({ status, canResetPassword }) {
     return (
         <GuestLayout>
             <Head title="Log in" />
-
             {status && (
                 <div className="mb-4 text-sm font-medium text-green-600">
                     {status}
@@ -101,7 +100,7 @@ export default function Login({ status, canResetPassword }) {
             )}
 
             <h1 className="text-2xl font-bold mb-6 text-center">Log in</h1>
-            
+           
             <form onSubmit={submit}>
                 <div>
                     <InputLabel htmlFor="email" value="Email" />

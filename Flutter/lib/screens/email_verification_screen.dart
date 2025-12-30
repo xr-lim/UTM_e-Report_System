@@ -153,7 +153,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen>
 
                       /// MIDDLE TEXT — DARKER & CLEARER NOW
                       Text(
-                        'A verification link has been sent to\n${widget.user.email}',
+                        'A verification link has been sent to\n${widget.user.email}', 
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 17,

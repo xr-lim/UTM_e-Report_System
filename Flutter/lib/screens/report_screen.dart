@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:utm_report_system/screens/traffic_report_screen.dart';
 import 'package:utm_report_system/screens/suspicious_report_screen.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
+
+  static const _primaryColor = Color(0xFF0118D8);
+  static const _accentColor = Color(0xFF1B56FD);
+  static const _whiteColor = Color(0xFFFFFFFF);
 
   void signUserOut() {
     FirebaseAuth.instance.signOut();
@@ -29,49 +34,77 @@ class ReportScreen extends StatelessWidget {
         description:
             'Report traffic violations, accidents, or parking issues on campus.',
         assetPath: 'assets/images/car.png',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TrafficReportScreen())),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TrafficReportScreen()),
+            ),
       ),
       _ReportOption(
         title: 'Report Suspicious Activity',
         description:
             'Report any suspicious behavior, security concerns, or policy violations.',
         assetPath: 'assets/images/sus.png',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => SuspiciousReportScreen())),
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SuspiciousReportScreen()),
+            ),
       ),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: _primaryColor,
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
               signUserOut();
             },
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: _whiteColor),
             tooltip: 'Sign out',
           ),
         ],
-        title: const Text('UTM Report System'),
+        title: const Text(
+          'UTM Report System',
+          style: TextStyle(color: _whiteColor, fontWeight: FontWeight.w600),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      body: Stack(
         children: [
-          if (user != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                'Logged in as ${user.email ?? 'Unknown email'}',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: Colors.grey[700]),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [_primaryColor, _accentColor, _primaryColor],
               ),
             ),
-          for (final option in options) ...[
-            _ReportCard(option: option),
-            const SizedBox(height: 20),
-          ],
+          ),
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: [
+                if (user != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'Logged in as ${user.email ?? 'Unknown email'}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: _whiteColor.withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                for (final option in options) ...[
+                  _ReportCard(option: option),
+                  const SizedBox(height: 20),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -101,68 +134,79 @@ class _ReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: option.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(18),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFFFF).withOpacity(0.95),
+              border: Border.all(
+                color: const Color(0xFFFFFFFF).withOpacity(0.2),
               ),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Image.asset(
-                  option.assetPath,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.asset(
+                      option.assetPath,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (_, __, ___) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 48,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    option.title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.title,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0118D8),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        option.description,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    option.description,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
