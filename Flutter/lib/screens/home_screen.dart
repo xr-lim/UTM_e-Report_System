@@ -3,6 +3,7 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:utm_report_system/screens/report_screen.dart';
 import 'package:utm_report_system/screens/emergency_screen.dart';
 import 'package:utm_report_system/screens/status_screen.dart';
+import 'package:utm_report_system/screens/feedback_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const ReportScreen(),
     const EmergencyScreen(),
     const StatusScreen(),
-    const ReportScreen(),
+    const FeedbackScreen(),
   ];
 
   @override
