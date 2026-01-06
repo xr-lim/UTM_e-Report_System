@@ -476,8 +476,21 @@ export default function Dashboard() {
           </div>
         </div>
 
-                {/* Row 3: Recent Activity Table */}
-                <RecentTable reports={reports.slice(0, 10)} />
+        {/* Row 3: Recent Activity Table */}
+        <div className="space-y-4">
+          <RecentTable reports={reports.slice(0, 10)} />
+          {reports.length > 10 && (
+            <div className="flex justify-center pb-4">
+              <button 
+                onClick={() => router.visit(route('reports.index'))}
+                className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-[#1B56FD] font-bold text-sm rounded-xl shadow-sm hover:bg-gray-50 hover:shadow-md transition-all active:scale-95"
+              >
+                View All Reports →
+              </button>
+            </div>
+          )}
+        </div>
+        
 
       </div>
     );
