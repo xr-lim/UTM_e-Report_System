@@ -111,12 +111,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="hidden md:flex items-center space-x-4">
                             
 
-                            {/* Notification Bell */}
-                            <button className="relative p-1.5 text-blue-200 hover:text-white hover:bg-white/10 rounded-full transition-colors">
-                                <Bell size={20} />
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[#0118D8]"></span>
-                            </button>
-
                             {/* User Profile & Logout */}
                             <div className="flex items-center gap-3 pl-4 border-l border-blue-800">
                                 <div className="text-right hidden sm:block">

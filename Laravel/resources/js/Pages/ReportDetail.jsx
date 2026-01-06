@@ -10,7 +10,7 @@ import {
     Timestamp
 } from "firebase/firestore";
 import { app } from "@/firebaseConfig";
-import { AlertTriangle, Car, Eye, MapPin, Loader, Save, ArrowLeft, X } from 'lucide-react';
+import { AlertTriangle, Car, Eye, MapPin, Loader, Save, ArrowLeft, X, Maximize2 } from 'lucide-react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 // --- Initialize Firebase Services ---
@@ -18,13 +18,10 @@ const db = getFirestore(app);
 
 // --- Helper Functions ---
 const fetchReportDetails = async (reportData) => {
-    // This logic is critical for resolving Document References
     let details = {
         fullDescription: (typeof reportData.description === 'string' ? reportData.description : 'Pending details fetch...') || 'No description found.',
         plateNo: 'N/A',
         suspiciousDetails: 'N/A',
-        imageURL: null,
-        locationURL: null,
     };
     
     let descriptionRef = reportData.description;
@@ -37,11 +34,8 @@ const fetchReportDetails = async (reportData) => {
                 const descData = descSnap.data();
 
                 details.fullDescription = descData.description || 'No detailed description.';
-                details.imageURL = descData.image || null; 
-
                 if (reportData.type?.toLowerCase() === 'traffic') {
                     details.plateNo = descData.plate_no || 'N/A';
-                    
                 } else if (reportData.type?.toLowerCase() === 'suspicious') {
                     details.suspiciousDetails = 
                         `Gender: ${descData.gender || 'N/A'}, Cloth: ${descData.cloth_color || 'N/A'}, Height: ${descData.height || 'N/A'}`;
@@ -52,12 +46,6 @@ const fetchReportDetails = async (reportData) => {
             details.fullDescription = 'Error fetching details. (Check SDK/Permission)';
         }
     }
-    
-    // Convert GeoPoint to a map link if location data exists
-    if (reportData.location && typeof reportData.location.latitude === 'number') {
-        details.locationURL = `https://www.google.com/maps/search/?api=1&query=${reportData.location.latitude},${reportData.location.longitude}`;
-    }
-
     return details;
 };
 
@@ -71,15 +59,15 @@ export default function ReportDetail({ auth, reportId }) {
     const [isSaving, setIsSaving] = useState(false);
 
     const statusOptions = ['pending', 'in review', 'resolved', 'rejected'];
+    const [selectedImage, setSelectedImage] = useState(null);
 
-    // --- Data Fetching Hook ---
     useEffect(() => {
         setIsLoading(true);
         setError(null);
         
         const fetchReport = async () => {
             try {
-                // 1. Fetch the main report document
+                // Fetch the main report document
                 const reportRef = doc(db, "reports", reportId);
                 const reportSnap = await getDoc(reportRef);
 
@@ -90,24 +78,31 @@ export default function ReportDetail({ auth, reportId }) {
                 }
                 
                 const data = reportSnap.data();
-                
-                // 2. Fetch linked details (full description, plate no, etc.)
                 const fetchedDetails = await fetchReportDetails(data);
-                
-                // 3. Combine and format the final report object
+                const isTraffic = data.type?.toLowerCase() === 'traffic';
+
+                let primary_image = null;
+                if (isTraffic) {
+                    primary_image = data.image_with_cp;
+                } else {
+                    primary_image = data.suspect_face_enlarged || data.image_with_face || null;
+                }
+
+                // Combine and format the final report object
                 const combinedReport = {
                     id: reportSnap.id,
-                    category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+                    type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+                    category: data.category,
                     status: data.status || 'pending',
-                    reporterName: data.reporter?.id || 'Anonymous',
+                    reporterId: data.reporter?.id || 'Anonymous',
                     time: data.created_at?.toDate ? data.created_at.toDate().toLocaleString('en-US') : 'N/A',
-                    
+                    primary_image: primary_image,
+                    supporting_image: data.supporting_image || [],
+                    location: data.location || null,
                     ...fetchedDetails,
                 };
-
                 setReport(combinedReport);
                 setCurrentStatus(combinedReport.status);
-                
             } catch (err) {
                 console.error("Failed to fetch report details:", err);
                 setError(`Failed to load report: ${err.message}`);
@@ -115,27 +110,21 @@ export default function ReportDetail({ auth, reportId }) {
                 setIsLoading(false);
             }
         };
-
         fetchReport();
     }, [reportId]);
-
 
     // --- Status Update Handler ---
     const handleSaveStatus = async () => {
         if (!report || currentStatus === report.status) return;
-
         setIsSaving(true);
         try {
             const reportRef = doc(db, "reports", reportId);
             await updateDoc(reportRef, {
                 status: currentStatus,
-                updated_at: Timestamp.now(), // Update timestamp
+                updated_at: Timestamp.now(),
             });
-            
-            // Update local state and show success message
             setReport(prev => ({ ...prev, status: currentStatus }));
             alert(`Status successfully updated to: ${currentStatus.toUpperCase()}`);
-
         } catch (e) {
             console.error("Failed to update status:", e);
             alert("Failed to save status. Check server logs/permissions.");
@@ -153,7 +142,6 @@ export default function ReportDetail({ auth, reportId }) {
         if (s === 'rejected') return 'text-red-700 bg-red-100 border-red-200';
         return 'text-gray-600 bg-gray-100 border-gray-200';
     };
-
 
     // --- Render Logic ---
     if (isLoading) {
@@ -179,9 +167,13 @@ export default function ReportDetail({ auth, reportId }) {
          return null; 
     }
 
-    const isTraffic = report.category === 'Traffic';
+    const isTraffic = report.type === 'Traffic';
     const isStatusChanged = currentStatus !== report.status;
 
+    // OpenStreetMap Export URL for Iframe
+    const osmUrl = report.location 
+        ? `https://www.openstreetmap.org/export/embed.html?bbox=${report.location.longitude-0.005},${report.location.latitude-0.005},${report.location.longitude+0.005},${report.location.latitude+0.005}&layer=mapnik&marker=${report.location.latitude},${report.location.longitude}`
+        : null;
 
     return (
         <AuthenticatedLayout
@@ -189,7 +181,7 @@ export default function ReportDetail({ auth, reportId }) {
             header={
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                        Report Detail: {report.id}
+                        Report: {report.id}
                     </h2>
                     <PrimaryButton 
                         onClick={() => router.visit(route('reports.index'))}
@@ -202,6 +194,23 @@ export default function ReportDetail({ auth, reportId }) {
         >
             <Head title={`Report ${report.id}`} />
 
+            {/* --- FLOATING WINDOW (MODAL) --- */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 transition-all"
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <button className="absolute top-5 right-5 text-white hover:text-gray-300 transition">
+                        <X size={40} />
+                    </button>
+                    <img 
+                        src={selectedImage} 
+                        className="max-w-full max-h-full rounded shadow-2xl animate-in zoom-in-95 duration-200" 
+                        alt="Enlarged view" 
+                    />
+                </div>
+            )}
+
             <div className="py-8">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -212,14 +221,21 @@ export default function ReportDetail({ auth, reportId }) {
                             {/* --- PRIMARY IMAGE SECTION --- */}
                             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Primary Evidence</h3>
-                                {report.image_with_cp ? (
-                                    <div className="rounded-lg overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                                {report.primary_image ? (
+                                    <div className="p-4 flex justify-center bg-gray-100 cursor-pointer group relative"
+                                        onClick={() => setSelectedImage(report.primary_image)}
+                                    >
                                         <img 
-                                            src={report.image_with_cp} 
-                                            alt="Main report evidence" 
-                                            className="w-full h-auto max-h-[500px] object-contain mx-auto"
+                                            src={report.primary_image} 
+                                            alt="Primary evidence" 
+                                            className="max-h-[500px] rounded shadow-lg transition group-hover:opacity-90"
                                             onError={(e) => { e.target.src = 'https://placehold.co/600x400?text=Image+Not+Found'; }}
                                         />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                            <div className="bg-black/50 p-3 rounded-full text-white">
+                                                <Maximize2 size={24} />
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 italic">
@@ -236,7 +252,8 @@ export default function ReportDetail({ auth, reportId }) {
                                     </h3>
                                     <div className="grid grid-cols-3 gap-4">
                                         {report.supporting_image.map((url, index) => (
-                                            <div key={index} className="aspect-video rounded-lg overflow-hidden border border-gray-100 group relative cursor-pointer">
+                                            <div key={index} className="aspect-video rounded-lg overflow-hidden border border-gray-100 group relative cursor-pointer"
+                                                onClick={() => setSelectedImage(url)}>
                                                 <img 
                                                     src={url} 
                                                     alt={`Support ${index + 1}`} 
@@ -294,21 +311,10 @@ export default function ReportDetail({ auth, reportId }) {
                                 <h3 className="text-xl font-bold text-gray-800 mb-4">
                                     {isTraffic ? 'Traffic Violation Details' : 'Suspicious Activity Report'}
                                 </h3>
-                                
-                                {/* Image Display */}
-                                {report.imageURL && (
-                                    <div className="mb-6">
-                                        <img 
-                                            src={report.imageURL} 
-                                            alt="Report Evidence" 
-                                            className="w-full max-h-96 object-cover rounded-lg shadow-inner border border-gray-200"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Evidence Photo</p>
-                                    </div>
-                                )}
 
                                 {/* Full Description */}
                                 <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
+                                    <p className="font-semibold text-gray-700 mb-2">Category: {report.category}</p>
                                     <p className="font-semibold text-gray-700 mb-2">Description:</p>
                                     <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">{report.fullDescription}</p>
                                 </div>
@@ -346,7 +352,7 @@ export default function ReportDetail({ auth, reportId }) {
                                     </p>
                                     <p className="flex justify-between items-center border-b pb-2">
                                         <span className="font-medium text-gray-600">Reporter ID:</span>
-                                        <span className="font-mono text-gray-900">{report.reporterName}</span>
+                                        <span className="font-mono text-gray-900">{report.reporterId}</span>
                                     </p>
                                     <p className="flex justify-between items-center border-b pb-2">
                                         <span className="font-medium text-gray-600">Time Submitted:</span>
@@ -358,19 +364,30 @@ export default function ReportDetail({ auth, reportId }) {
                                             {report.status}
                                         </span>
                                     </p>
-                                    {report.locationURL && (
-                                        <p className="pt-2">
-                                            <a 
-                                                href={report.locationURL} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
-                                                className="w-full inline-flex justify-center items-center text-blue-600 hover:underline transition-colors"
-                                            >
-                                                <MapPin size={16} className="mr-1" />
-                                                View Location on Map
-                                            </a>
-                                        </p>
-                                    )}
+                                    <p className="pt-2">
+                                        {/* OpenStreetMap Iframe */}
+                                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                            <div className="p-4 border-b bg-gray-50 font-bold text-sm text-gray-500 uppercase flex items-center gap-2">
+                                                <MapPin size={16} className="text-red-500"/> Incident Location
+                                            </div>
+                                            <div className="h-64 w-full">
+                                                {osmUrl ? (
+                                                    <iframe 
+                                                        width="100%" 
+                                                        height="100%" 
+                                                        frameBorder="0" 
+                                                        scrolling="no" 
+                                                        marginHeight="0" 
+                                                        marginWidth="0" 
+                                                        src={osmUrl}
+                                                        style={{ border: 0 }}
+                                                    ></iframe>
+                                                ) : (
+                                                    <div className="h-full flex items-center justify-center text-gray-400">No Location Data</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </p>
                                 </div>
                             </div>
                         </div>
