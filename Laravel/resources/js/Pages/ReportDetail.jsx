@@ -88,6 +88,14 @@ export default function ReportDetail({ auth, reportId }) {
                     primary_image = data.suspect_face_enlarged || data.image_with_face || null;
                 }
 
+                const supporting_images =[];
+                if (!isTraffic && data.image_with_face) {
+                    supporting_images.push(data.image_with_face);
+                }
+                if (data.supporting_image && Array.isArray(data.supporting_image)) {
+                    supporting_images.push(...data.supporting_image);
+                }
+
                 // Combine and format the final report object
                 const combinedReport = {
                     id: reportSnap.id,
@@ -97,7 +105,8 @@ export default function ReportDetail({ auth, reportId }) {
                     reporterId: data.reporter?.id || 'Anonymous',
                     time: data.created_at?.toDate ? data.created_at.toDate().toLocaleString('en-US') : 'N/A',
                     primary_image: primary_image,
-                    supporting_image: data.supporting_image || [],
+                    image_with_face: data.image_with_face || null,
+                    supporting_image: supporting_images || [],
                     location: data.location || null,
                     ...fetchedDetails,
                 };
@@ -239,7 +248,7 @@ export default function ReportDetail({ auth, reportId }) {
                                     </div>
                                 ) : (
                                     <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 italic">
-                                        No primary image provided.
+                                        No image provided.
                                     </div>
                                 )}
                             </div>

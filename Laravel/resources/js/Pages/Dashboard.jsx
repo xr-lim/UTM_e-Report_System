@@ -100,8 +100,8 @@ const HeatmapSection = () => (
 );
 
 const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
-  const trafficPercent = totalReports ? Math.round((trafficCount / totalReports) * 100) : 0;
-  const suspiciousPercent = totalReports ? 100 - trafficPercent : 0;
+  const trafficPercent = totalReports > 0 ? Math.round((trafficCount / totalReports) * 100) : 0;
+  const suspiciousPercent = totalReports > 0 ? 100 - trafficPercent : 0;
   const total = totalReports || 0;
 
   return (
@@ -112,9 +112,9 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
       <div className="flex-1 flex flex-col items-center justify-center">
         {/* CSS Conic Gradient Pie Chart */}
         <div className="relative w-48 h-48 rounded-full shadow-lg transition-transform hover:scale-105 duration-300"
-            style={{ background: `conic-gradient(#1B56FD 0% 60%, #EF4444 60% 100%)` }}>
+            style={{ background: `conic-gradient(#1B56FD ${trafficPercent}%, #EF4444 ${trafficPercent}% 100%)` }}>
           <div className="absolute inset-8 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
-            <span className="text-4xl font-extrabold text-gray-900">105</span>
+            <span className="text-4xl font-extrabold text-gray-900">{totalReports}</span>
             <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">Total Reports</span>
           </div>
         </div>
@@ -123,16 +123,16 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
           <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-[#1B56FD] mr-3 shadow-sm"></div>
-              <span className="text-gray-700 text-sm font-medium">Traffic Issues</span>
+              <span className="text-gray-700 text-sm font-medium">Traffic ({trafficCount})</span>
             </div>
-            <span className="font-bold text-[#1B56FD]">60%</span>
+            <span className="font-bold text-[#1B56FD]">{trafficPercent}%</span>
           </div>
           <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
             <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-red-500 mr-3 shadow-sm"></div>
-              <span className="text-gray-700 text-sm font-medium">Suspicious Activity</span>
+              <span className="text-gray-700 text-sm font-medium">Suspicious ({suspiciousCount})</span>
             </div>
-            <span className="font-bold text-red-500">40%</span>
+            <span className="font-bold text-red-500">{suspiciousPercent}%</span>
           </div>
         </div>
       </div>
@@ -384,8 +384,6 @@ export default function Dashboard() {
                     reporterName: data.reporter.id || 'Anonymous',
                     timeAgo: formattedDateTime,
                     location: data.location,
-
-                    // --- Dynamic Fields Added to Final Object ---
                     ...fetchedDetails,
                 };
             });
@@ -469,7 +467,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Row 3: Recent Activity Table */}
-                <RecentTable reports={reports} />
+                <RecentTable reports={reports.slice(0, 10)} />
 
             </div>
         );
