@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:utm_report_system/screens/report_screen.dart';
 import 'package:utm_report_system/screens/emergency_screen.dart';
+import 'package:utm_report_system/screens/status_screen.dart';
+import 'package:utm_report_system/screens/feedback_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,10 +16,10 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    ReportScreen(),
-    EmergencyScreen(),
-    ReportScreen(),
-    ReportScreen(),
+    const ReportScreen(),
+    const EmergencyScreen(),
+    const StatusScreen(),
+    const FeedbackScreen(),
   ];
 
   @override
@@ -45,8 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 text: 'Emergency'
               ),
               GButton(
-                icon: Icons.contact_emergency,
-                text: 'Contact'
+                icon: Icons.list_alt,
+                text: 'Status'
               ),
               GButton(
                 icon: Icons.feedback,
