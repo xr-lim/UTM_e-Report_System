@@ -125,8 +125,6 @@ dependencies = [
     "termcolor==3.2.0",
     "tifffile==2025.10.16",
     "tinycss2==1.4.0",
-    "torch==2.9.0",
-    "torchvision==0.24.0",
     "tornado==6.5.2",
     "tqdm==4.67.1",
     "traitlets==5.14.3",
@@ -146,5 +144,52 @@ dependencies = [
     "yarg==0.1.9",
 ]
 
+# ============================================================================
+# PyTorch Installation Options
+# ============================================================================
+# Choose ONE of the following based on your hardware:
+#
+#   For NVIDIA GPU (CUDA 12.x):
+#     uv sync --extra cuda
+#
+#   For CPU only (no GPU / AMD / Intel):
+#     uv sync --extra cpu
+#
+# ============================================================================
+
+[project.optional-dependencies]
+# GPU support - requires NVIDIA GPU with CUDA 12.x
+cuda = [
+    "torch",
+    "torchvision",
+]
+# CPU only - works on all systems
+cpu = [
+    "torch",
+    "torchvision",
+]
+
 [tool.uv.sources]
 realesrgan = { git = "https://github.com/xinntao/Real-ESRGAN.git", rev = "a4abfb2979a7bbff3f69f58f58ae324608821e27" }
+
+# PyTorch package indexes
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+# Default: Route torch to CUDA index
+# For CPU users: they need to use the install script or manual override
+[tool.uv.sources.torch]
+index = "pytorch-cu124"
+
+[tool.uv.sources.torchvision]
+index = "pytorch-cu124"
+
+# Override to prevent headless OpenCV (conflicts with ultralytics which needs cv2.imshow)
+# Note: If opencv-python-headless gets reinstalled, run: uv pip uninstall opencv-python-headless

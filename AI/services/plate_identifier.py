@@ -54,7 +54,7 @@ class CarPlateIdentifier:
         # Initialize EasyOCR for English text recognition
         logger.info("Initializing EasyOCR...")
         try:
-            self.reader = easyocr.Reader(['en'], gpu=False)
+            self.reader = easyocr.Reader(['en'], gpu=True)
             logger.info("EasyOCR initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize EasyOCR: {e}")
