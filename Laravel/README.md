@@ -76,6 +76,7 @@ Create your local environment file and configure Firebase API keys.
 ```bash
 cp .env.example .env
 php artisan key:generate
+php artisan migrate
 ```
 
 In your `.env` file, ensure you have the following keys populated with your Firebase project configuration:

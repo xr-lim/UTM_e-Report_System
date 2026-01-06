@@ -36,15 +36,11 @@ MODELS_CONFIG = {
         'check_file': os.path.join(MODELS_DIR, 'realesrgan', 'inference_realesrgan.py')
     },
     'gfpgan': {
+        # Only detection weights needed - parsing_parsenet.pth is for face enhancement (not used)
         'weights': [
             {
                 'name': 'detection_Resnet50_Final.pth',
                 'url': 'https://github.com/xinntao/facexlib/releases/download/v0.1.0/detection_Resnet50_Final.pth',
-                'dest': os.path.join(MODELS_DIR, 'gfpgan', 'weights')
-            },
-            {
-                'name': 'parsing_parsenet.pth',
-                'url': 'https://github.com/xinntao/facexlib/releases/download/v0.1.0/parsing_parsenet.pth',
                 'dest': os.path.join(MODELS_DIR, 'gfpgan', 'weights')
             }
         ],

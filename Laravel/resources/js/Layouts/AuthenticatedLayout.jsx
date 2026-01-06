@@ -8,25 +8,24 @@ import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { app } from '@/firebaseConfig';
 import {
-  LogOut,
-  Bell,
-  Search,
-  Menu,
-  X
+    LogOut,
+    Bell,
+    Search,
+    Menu,
+    X
 } from 'lucide-react';
 
 // --- Helper Component for the Blue Header Links ---
 const NavbarItem = ({ href, active, children }) => (
-  <Link
-    href={href}
-    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-      active
-        ? 'bg-[#1B56FD] text-white shadow-md'
-        : 'text-blue-100 hover:bg-white/10 hover:text-white'
-    }`}
-  >
-    {children}
-  </Link>
+    <Link
+        href={href}
+        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${active
+                ? 'bg-[#1B56FD] text-white shadow-md'
+                : 'text-blue-100 hover:bg-white/10 hover:text-white'
+            }`}
+    >
+        {children}
+    </Link>
 );
 
 export default function AuthenticatedLayout({ header, children }) {

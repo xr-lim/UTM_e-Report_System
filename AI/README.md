@@ -123,6 +123,9 @@ This fine-tuning ensures the model performs significantly better on Malaysian pl
 # Navigate to AI folder
 cd AI
 
+# Install uv (if not already installed)
+pip install uv
+
 # Create virtual environment
 uv venv
 
@@ -131,10 +134,42 @@ uv venv
 
 # Activate (Linux/macOS)
 source .venv/bin/activate
-
-# Install dependencies
-uv sync
 ```
+
+### PyTorch Installation (Choose One)
+
+The AI models require PyTorch. Choose the correct version for your hardware:
+
+#### Option A: NVIDIA GPU (Recommended for faster processing)
+
+If you have an NVIDIA GPU with CUDA support:
+
+```bash
+# Check if you have an NVIDIA GPU
+nvidia-smi
+
+# Install with CUDA support (~2.5GB download)
+uv sync --extra cuda
+```
+
+#### Option B: CPU Only (Works on all systems)
+
+If you don't have an NVIDIA GPU, or you're on AMD/Intel:
+
+```bash
+# Install CPU version (~200MB download)
+uv sync --extra cpu
+```
+
+#### Option C: Auto-detect (Interactive)
+
+Run the setup script to auto-detect your hardware:
+
+```bash
+uv run python setup_pytorch.py
+```
+
+> **Note:** GPU acceleration provides 10-20x faster face upscaling. CPU version works but is significantly slower.
 
 ---
 

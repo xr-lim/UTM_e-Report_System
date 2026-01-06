@@ -159,6 +159,67 @@ async def identify_plate(file: UploadFile = File(...)):
 
 
 if __name__ == "__main__":
-    print("Starting UTM Report System AI API...")
-    print("Swagger UI: http://127.0.0.1:8000/docs")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import socket
+    
+    def get_network_ips():
+        """Get valid network IPs, filtering out virtual adapters and link-local."""
+        ips = []
+        try:
+            # Get all network interfaces
+            for interface in socket.getaddrinfo(socket.gethostname(), None):
+                ip = interface[4][0]
+                # Filter for IPv4 only
+                if "." not in ip:
+                    continue
+                # Skip loopback
+                if ip.startswith("127."):
+                    continue
+                # Skip link-local (APIPA) addresses - these are not routable
+                if ip.startswith("169.254."):
+                    continue
+                # Skip VirtualBox adapter
+                if ip.startswith("192.168.56."):
+                    continue
+                # Skip already added
+                if ip in ips:
+                    continue
+                ips.append(ip)
+        except Exception:
+            pass
+        
+        # Sort to prioritize mobile hotspot first, then WiFi
+        def ip_priority(ip):
+            if ip.startswith("172.20."):  # Mobile hotspot
+                return 0
+            if ip.startswith("192.168."):  # Home WiFi
+                return 1
+            if ip.startswith("10."):  # Corporate/VPN
+                return 2
+            return 5
+        
+        return sorted(ips, key=ip_priority)
+
+    local_ips = get_network_ips()
+    
+    print("\n" + "="*50)
+    print("UTM Report System AI API is starting...")
+    print("="*50)
+    print(f"Local Access:   http://127.0.0.1:8000")
+    print(f"Swagger Docs:   http://127.0.0.1:8000/docs")
+    print("-"*50)
+    print("Network Access (Try these from other devices):")
+    if local_ips:
+        # Show the best IP first with emphasis
+        print(f"  ★ http://{local_ips[0]}:8000  (recommended)")
+        for ip in local_ips[1:]:
+            print(f"  - http://{ip}:8000")
+    else:
+        print("  (No network interfaces detected)")
+    print("-"*50)
+    print("If other devices cannot connect:")
+    print("1. Ensure they are on the SAME WiFi network.")
+    print("2. Check Windows Firewall: Allow Python/Uvicorn or Port 8000.")
+    print("3. Set your network profile to 'Private' in Windows Settings.")
+    print("="*50 + "\n")
+    
+    uvicorn.run(app, host="0.0.0.0", port=8000)

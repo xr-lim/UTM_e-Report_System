@@ -17,6 +17,16 @@ import logging
 # Configure module logger
 logger = logging.getLogger(__name__)
 
+# --- GPU Status Check ---
+try:
+    import torch
+    if torch.cuda.is_available():
+        logger.info(f"PyTorch CUDA available: GPU={torch.cuda.get_device_name(0)}")
+    else:
+        logger.warning("PyTorch CUDA not available - Real-ESRGAN will use CPU (slow)")
+except ImportError:
+    logger.warning("PyTorch not found - GPU status unknown")
+
 # --- Initialization ---
 logger.info("Initializing MTCNN detector...")
 try:

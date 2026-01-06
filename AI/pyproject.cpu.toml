@@ -1,0 +1,15 @@
+# CPU Installation Override
+# ========================
+# Copy this file's content to replace the [tool.uv.sources.torch] section
+# in pyproject.toml when installing on CPU-only systems.
+#
+# Or run: uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#
+# After installing, you can delete the torch source overrides from pyproject.toml
+# and the uv.lock will keep the correct versions.
+
+[tool.uv.sources.torch]
+index = "pytorch-cpu"
+
+[tool.uv.sources.torchvision]
+index = "pytorch-cpu"
