@@ -43,7 +43,6 @@ export default function Register() {
         }
     };
 
-
     const handleRegister = async (e) => {
         e.preventDefault();
 
@@ -74,7 +73,7 @@ export default function Register() {
 
         } catch (err) {
             console.error("FULL ERROR OBJECT:", err);
-            
+           
             if (err.code === 'auth/email-already-in-use') {
                 try {
                     const userCred = await signInWithEmailAndPassword(auth, data.email, data.password);
@@ -84,7 +83,7 @@ export default function Register() {
                         // CONDITION A: Account exists, but NOT verified.
                         // Action: Resend email and remind them.
                         await sendEmailVerification(user);
-                        
+                       
                         alert("This email is already registered but NOT verified. We have resent the verification email.");
                         router.visit(route('verify-email'));
                     } else {
@@ -94,7 +93,7 @@ export default function Register() {
                     }
 
                 } catch (loginErr) {
-                    // CONDITION C: Account exists, but the password they typed NOW 
+                    // CONDITION C: Account exists, but the password they typed NOW
                     // doesn't match the old password. We can't help them here.
                     alert("This email is already registered. Please log in.");
                     router.visit(route('login'));
