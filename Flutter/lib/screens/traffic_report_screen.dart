@@ -1,4 +1,16 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart' as latlng;
+import 'package:utm_report_system/screens/home_screen.dart';
+import '../services/license_plate_service.dart';
 
 class TrafficReportScreen extends StatefulWidget {
   const TrafficReportScreen({super.key});
@@ -8,15 +20,21 @@ class TrafficReportScreen extends StatefulWidget {
 }
 
 class _TrafficReportScreenState extends State<TrafficReportScreen> {
+  static const latlng.LatLng _utmCampusCenter = latlng.LatLng(1.5631, 103.6368);
+
   final PageController _pageController = PageController();
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _locationNotesController = TextEditingController();
+  final TextEditingController _locationNotesController =
+      TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
+  XFile? _vehicleImage;
+  final List<XFile> _supportingImages = [];
 
   final List<String> _categories = const [
-    'Accident',
+    'No UTM Parking Permit',
     'Illegal Parking',
-    'Speeding',
     'Hit and Run',
     'Other',
   ];
@@ -24,6 +42,10 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
   String? _selectedCategory;
   int _currentPage = 0;
   String? _locationLabel;
+  latlng.LatLng? _selectedLatLng;
+  bool _isScanningPlate = false;
+  bool _isLocating = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -63,6 +85,11 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
       return false;
     }
 
+    if (_vehicleImage == null) {
+      _showSnackBar('Please upload a vehicle photo with the plate visible.');
+      return false;
+    }
+
     if (_descriptionController.text.trim().isEmpty) {
       _showSnackBar('Please add a short description.');
       return false;
@@ -80,18 +107,246 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
+
+  Future<void> _pickVehicleImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _vehicleImage = image;
+        _isScanningPlate = true;
+      });
+
+      // Automatically scan license plate from the uploaded image
+      await _scanLicensePlate(image);
+    } catch (e) {
+      _showSnackBar('Failed to pick image. Please try again.');
+      setState(() {
+        _isScanningPlate = false;
+      });
+    }
+  }
+
+  Future<void> _scanLicensePlate(XFile imageFile) async {
+    try {
+      final File file = File(imageFile.path);
+      final String? plateNumber = await LicensePlateService.scanLicensePlate(
+        file,
+      );
+
+      setState(() {
+        _isScanningPlate = false;
+      });
+
+      if (plateNumber != null && plateNumber.isNotEmpty) {
+        // Auto-fill the plate number text field
+        _plateController.text = plateNumber;
+        _showSnackBar('License plate detected: $plateNumber');
+      } else {
+        _showSnackBar('Could not detect license plate. Please enter manually.');
+      }
+    } catch (e) {
+      setState(() {
+        _isScanningPlate = false;
+      });
+
+      // Show user-friendly error message
+      String errorMessage = 'Failed to scan license plate.';
+      if (e.toString().contains('API URL not configured')) {
+        errorMessage =
+            'License plate API not configured. Please contact support.';
+      } else if (e.toString().contains('status')) {
+        errorMessage =
+            'License plate service unavailable. Please try again later.';
+      }
+
+      _showSnackBar(errorMessage);
+      debugPrint('License plate scanning error: $e');
+    }
+  }
+
+  int get _remainingSupportingSlots => 5 - _supportingImages.length;
+
+  Future<void> _addSupportingFromGallery() async {
+    if (_remainingSupportingSlots <= 0) {
+      _showSnackBar('Maximum of 5 supporting images reached.');
+      return;
+    }
+
+    try {
+      final images = await _picker.pickMultiImage(
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 80,
+      );
+
+      if (images.isEmpty) return;
+
+      final allowed = images.take(_remainingSupportingSlots).toList();
+      setState(() => _supportingImages.addAll(allowed));
+
+      if (images.length > allowed.length) {
+        _showSnackBar(
+          'Only the first ${allowed.length} images were added (limit 5).',
+        );
+      }
+    } catch (e) {
+      _showSnackBar('Failed to pick images. Please try again.');
+    }
+  }
+
+  Future<void> _addSupportingFromCamera() async {
+    if (_remainingSupportingSlots <= 0) {
+      _showSnackBar('Maximum of 5 supporting images reached.');
+      return;
+    }
+
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+      setState(() => _supportingImages.add(image));
+    } catch (e) {
+      _showSnackBar('Failed to capture image. Please try again.');
+    }
+  }
+
+  void _removeSupportingImage(int index) {
+    setState(() => _supportingImages.removeAt(index));
+  }
+
+  Future<bool> _ensureLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showSnackBar('Please enable location services.');
+      return false;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showSnackBar('Location permission is required.');
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showSnackBar(
+        'Location permissions are permanently denied. Enable them in settings.',
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<String> _reverseGeocode(latlng.LatLng coords) async {
+    try {
+      final placemarks = await geocoding.placemarkFromCoordinates(
+        coords.latitude,
+        coords.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        final parts =
+            [
+                  placemark.name,
+                  placemark.street,
+                  placemark.locality,
+                  placemark.administrativeArea,
+                ]
+                .whereType<String>()
+                .map((part) => part.trim())
+                .where((part) => part.isNotEmpty)
+                .toList();
+        if (parts.isNotEmpty) {
+          return parts.join(', ');
+        }
+      }
+    } catch (e) {
+      debugPrint('Reverse geocoding failed: $e');
+    }
+
+    return _formatCoordinates(coords);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      final hasPermission = await _ensureLocationPermission();
+      if (!hasPermission) {
+        setState(() => _isLocating = false);
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final coords = latlng.LatLng(position.latitude, position.longitude);
+      final readableLabel = await _reverseGeocode(coords);
+
+      setState(() {
+        _selectedLatLng = coords;
+        _locationLabel = readableLabel;
+        _isLocating = false;
+      });
+    } catch (e) {
+      setState(() => _isLocating = false);
+      _showSnackBar('Failed to capture current location.');
+      debugPrint('Current location error: $e');
+    }
+  }
+
+  Future<void> _openMapPicker() async {
+    final startingPoint = _selectedLatLng ?? _utmCampusCenter;
+    final result = await showModalBottomSheet<latlng.LatLng>(
+      context: context,
+      isScrollControlled: true,
+      builder:
+          (context) => FractionallySizedBox(
+            heightFactor: 0.9,
+            child: _MapPicker(initialPosition: startingPoint),
+          ),
+    );
+
+    if (result != null) {
+      final readableLabel = await _reverseGeocode(result);
+      setState(() {
+        _selectedLatLng = result;
+        _locationLabel = readableLabel;
+      });
+    }
+  }
+
+  String _formatCoordinates(latlng.LatLng coords) =>
+      '${coords.latitude.toStringAsFixed(5)}, ${coords.longitude.toStringAsFixed(5)}';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Traffic Report'),
-      ),
+      appBar: AppBar(title: const Text('Traffic Report')),
       body: Column(
         children: [
           const SizedBox(height: 16),
@@ -121,36 +376,72 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Upload Evidence',
+            'Vehicle Photo (Required)',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please include a clear photo of the vehicle with the license plate visible.',
+            style: TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 12),
-          _ImageUploadCard(
-            onUploadTap: () => _showSnackBar('Image picker coming soon'),
-            onCameraTap: () => _showSnackBar('Camera support coming soon'),
+          _VehicleImageCard(
+            imageFile: _vehicleImage == null ? null : File(_vehicleImage!.path),
+            onUploadTap: () => _pickVehicleImage(ImageSource.gallery),
+            onCameraTap: () => _pickVehicleImage(ImageSource.camera),
+            isScanning: _isScanningPlate,
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Supporting Images (Optional, max 5)',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Add close-ups, wider shots, or other photos that help explain the incident.',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          _SupportingImagesSection(
+            images: _supportingImages,
+            onAddFromCamera: _addSupportingFromCamera,
+            onAddFromGallery: _addSupportingFromGallery,
+            onRemove: _removeSupportingImage,
+            remainingSlots: _remainingSupportingSlots,
           ),
           const SizedBox(height: 24),
           TextField(
             controller: _plateController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Plate Number',
               hintText: 'e.g. ABC1234',
+              suffixIcon:
+                  _isScanningPlate
+                      ? const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                      : null,
             ),
+            enabled: !_isScanningPlate,
           ),
           const SizedBox(height: 24),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
-            items: _categories
-                .map(
-                  (category) => DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  ),
-                )
-                .toList(),
-            decoration: const InputDecoration(
-              labelText: 'Category',
-            ),
+            items:
+                _categories
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ),
+                    )
+                    .toList(),
+            decoration: const InputDecoration(labelText: 'Category'),
             onChanged: (value) => setState(() => _selectedCategory = value),
           ),
           const SizedBox(height: 24),
@@ -179,57 +470,32 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade400),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.map, size: 48, color: Colors.grey),
-                  const SizedBox(height: 8),
-                  Text(
-                    _locationLabel ?? 'No location selected',
-                    style: TextStyle(
-                      color: _locationLabel == null
-                          ? Colors.grey
-                          : Colors.grey.shade800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildMapPreview(),
           const SizedBox(height: 16),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
               ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _locationLabel = 'Using current location (mock)';
-                  });
-                  _showSnackBar('Location capture to be implemented');
-                },
+                onPressed: _isLocating ? null : _useCurrentLocation,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[50],
                   foregroundColor: Colors.black,
                 ),
-                icon: const Icon(Icons.my_location),
-                label: const Text('Use Current Location'),
+                icon:
+                    _isLocating
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.my_location),
+                label: Text(
+                  _isLocating ? 'Locating...' : 'Use Current Location',
+                ),
               ),
               OutlinedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _locationLabel = 'Map selection placeholder';
-                  });
-                  _showSnackBar('Map picker to be implemented');
-                },
+                onPressed: _openMapPicker,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.black,
                   side: const BorderSide(color: Colors.black),
@@ -237,6 +503,17 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
                 icon: const Icon(Icons.place_outlined),
                 label: const Text('Select on Map'),
               ),
+              if (_selectedLatLng != null)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedLatLng = null;
+                      _locationLabel = null;
+                    });
+                  },
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Clear Selection'),
+                ),
             ],
           ),
           const SizedBox(height: 24),
@@ -250,6 +527,92 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMapPreview() {
+    if (_selectedLatLng == null) {
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.map_outlined, size: 48, color: Colors.grey),
+              const SizedBox(height: 8),
+              Text(
+                'No location selected',
+                style: TextStyle(color: Colors.grey.shade700),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 220,
+        child: Stack(
+          children: [
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: _selectedLatLng!,
+                initialZoom: 16,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.none,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'utm_report_system',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _selectedLatLng!,
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.topCenter,
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.redAccent,
+                        size: 40,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              top: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _locationLabel ?? _formatCoordinates(_selectedLatLng!),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -274,21 +637,37 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
                 children: [
                   _buildSummaryRow('Category', _selectedCategory ?? '-'),
                   _buildSummaryRow(
-                      'Plate No.', _plateController.text.trim().isEmpty
-                          ? '-'
-                          : _plateController.text.trim()),
+                    'Plate No.',
+                    _plateController.text.trim().isEmpty
+                        ? '-'
+                        : _plateController.text.trim(),
+                  ),
                   _buildSummaryRow(
-                      'Description',
-                      _descriptionController.text.trim().isEmpty
-                          ? '-'
-                          : _descriptionController.text.trim()),
+                    'Vehicle Photo',
+                    _vehicleImage == null ? 'Not attached' : 'Attached',
+                  ),
                   _buildSummaryRow(
-                      'Location', _locationLabel ?? 'Not provided yet'),
+                    'Supporting Photos',
+                    _supportingImages.isEmpty
+                        ? 'None'
+                        : '${_supportingImages.length} attached',
+                  ),
                   _buildSummaryRow(
-                      'Location Notes',
-                      _locationNotesController.text.trim().isEmpty
-                          ? '-'
-                          : _locationNotesController.text.trim()),
+                    'Description',
+                    _descriptionController.text.trim().isEmpty
+                        ? '-'
+                        : _descriptionController.text.trim(),
+                  ),
+                  _buildSummaryRow(
+                    'Location',
+                    _locationLabel ?? 'Not provided yet',
+                  ),
+                  _buildSummaryRow(
+                    'Location Notes',
+                    _locationNotesController.text.trim().isEmpty
+                        ? '-'
+                        : _locationNotesController.text.trim(),
+                  ),
                   _buildSummaryRow('Status', 'Pending'),
                   _buildSummaryRow('Type', 'Traffic'),
                 ],
@@ -318,9 +697,7 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -341,12 +718,19 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
           if (_currentPage > 0) const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == 2 ? _showSubmitSoon : _nextPage,
+              onPressed:
+                  (_currentPage == 2 && _isSubmitting)
+                      ? null
+                      : (_currentPage == 2 ? _submitReport : _nextPage),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              child: Text(_currentPage == 2 ? 'Submit' : 'Next'),
+              child: Text(
+                _currentPage == 2
+                    ? (_isSubmitting ? 'Submitting...' : 'Submit')
+                    : 'Next',
+              ),
             ),
           ),
         ],
@@ -354,8 +738,124 @@ class _TrafficReportScreenState extends State<TrafficReportScreen> {
     );
   }
 
-  void _showSubmitSoon() {
-    _showSnackBar('Submission flow will be implemented soon.');
+  Future<void> _submitReport() async {
+    // Ensure all steps are valid before submitting
+    if (!_validateFirstPage() || !_validateSecondPage()) {
+      _goToPage(!_validateFirstPage() ? 0 : 1);
+      return;
+    }
+
+    if (_isSubmitting) return;
+
+    // Ensure user is authenticated
+    if (FirebaseAuth.instance.currentUser == null) {
+      _showSnackBar('You must be logged in to submit a report.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final storage = FirebaseStorage.instance;
+      final auth = FirebaseAuth.instance;
+
+      // Generate unique formatted report ID (T + 6 digits)
+      final countResult =
+          await firestore.collection('traffic_reports').count().get();
+      int nextNumber = (countResult.count ?? 0) + 1;
+      String reportId = 'T${nextNumber.toString().padLeft(6, '0')}';
+
+      // Verify ID doesn't exist (in case of gaps from deletions)
+      var existingDoc =
+          await firestore.collection('traffic_reports').doc(reportId).get();
+      while (existingDoc.exists) {
+        nextNumber++;
+        reportId = 'T${nextNumber.toString().padLeft(6, '0')}';
+        existingDoc =
+            await firestore.collection('traffic_reports').doc(reportId).get();
+      }
+
+      // Create document reference with unique ID
+      final docRef = firestore.collection('traffic_reports').doc(reportId);
+
+      // Upload vehicle image (main image with license plate)
+      String? vehicleImageUrl;
+      if (_vehicleImage != null) {
+        final ref = storage.ref().child(
+          'reports/${docRef.id}/vehicle_image.jpg',
+        );
+        await ref.putFile(File(_vehicleImage!.path));
+        vehicleImageUrl = await ref.getDownloadURL();
+      }
+
+      // Upload supporting images
+      final List<String> supportingImageUrls = [];
+      for (int i = 0; i < _supportingImages.length; i++) {
+        final img = _supportingImages[i];
+        final ref = storage.ref().child(
+          'reports/${docRef.id}/supporting_$i.jpg',
+        );
+        await ref.putFile(File(img.path));
+        final url = await ref.getDownloadURL();
+        supportingImageUrls.add(url);
+      }
+
+      // GeoPoint for location (matches Firestore)
+      final GeoPoint? location =
+          _selectedLatLng == null
+              ? null
+              : GeoPoint(_selectedLatLng!.latitude, _selectedLatLng!.longitude);
+
+      // Reporter reference
+      final reporterRef = firestore.doc('/users/${auth.currentUser!.uid}');
+
+      // Save document to Firestore
+      await docRef.set({
+        'category': _selectedCategory,
+        'plate_number':
+            _plateController.text.trim().isEmpty
+                ? null
+                : _plateController.text.trim(),
+        'description':
+            _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+        'location_notes':
+            _locationNotesController.text.trim().isEmpty
+                ? null
+                : _locationNotesController.text.trim(),
+        'location_label': _locationLabel,
+        'image_with_cp': vehicleImageUrl,
+        'location': location,
+        'reporter': reporterRef,
+        'status': 'pending',
+        'supporting_images': supportingImageUrls,
+        'type': 'traffic',
+        'created_at': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      _showSnackBar('Traffic report submitted successfully.');
+
+      // Navigate back to homepage
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false, // Remove all previous routes
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Failed to submit traffic report: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _showSnackBar('Failed to submit: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 }
 
@@ -377,9 +877,8 @@ class _StepIndicator extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: index <= currentStep
-                    ? Colors.blue
-                    : Colors.grey.shade300,
+                backgroundColor:
+                    index <= currentStep ? Colors.blue : Colors.grey.shade300,
                 child: Text(
                   '${index + 1}',
                   style: TextStyle(
@@ -393,9 +892,8 @@ class _StepIndicator extends StatelessWidget {
                   width: 40,
                   height: 2,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  color: index < currentStep
-                      ? Colors.blue
-                      : Colors.grey.shade300,
+                  color:
+                      index < currentStep ? Colors.blue : Colors.grey.shade300,
                 ),
             ],
           ),
@@ -405,21 +903,23 @@ class _StepIndicator extends StatelessWidget {
   }
 }
 
-class _ImageUploadCard extends StatelessWidget {
-  const _ImageUploadCard({
+class _VehicleImageCard extends StatelessWidget {
+  const _VehicleImageCard({
     required this.onUploadTap,
     required this.onCameraTap,
+    this.imageFile,
+    this.isScanning = false,
   });
 
   final VoidCallback onUploadTap;
   final VoidCallback onCameraTap;
+  final File? imageFile;
+  final bool isScanning;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: Colors.grey[200],
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -427,19 +927,53 @@ class _ImageUploadCard extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              height: 160,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.camera_alt_outlined,
-                  size: 48,
-                  color: Colors.grey,
-                ),
-              ),
+              child:
+                  imageFile == null
+                      ? const Center(
+                        child: Icon(
+                          Icons.camera_alt_outlined,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                      )
+                      : Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(imageFile!, fit: BoxFit.cover),
+                          ),
+                          if (isScanning)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'Scanning license plate...',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -476,4 +1010,227 @@ class _ImageUploadCard extends StatelessWidget {
   }
 }
 
+class _SupportingImagesSection extends StatelessWidget {
+  const _SupportingImagesSection({
+    required this.images,
+    required this.onAddFromCamera,
+    required this.onAddFromGallery,
+    required this.onRemove,
+    required this.remainingSlots,
+  });
 
+  final List<XFile> images;
+  final VoidCallback onAddFromCamera;
+  final VoidCallback onAddFromGallery;
+  final void Function(int index) onRemove;
+  final int remainingSlots;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            ElevatedButton.icon(
+              onPressed: remainingSlots > 0 ? onAddFromCamera : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[50],
+                foregroundColor: Colors.black,
+              ),
+              icon: const Icon(Icons.photo_camera),
+              label: Text(remainingSlots > 0 ? 'Camera' : 'Limit reached'),
+            ),
+            OutlinedButton.icon(
+              onPressed: remainingSlots > 0 ? onAddFromGallery : null,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Gallery'),
+            ),
+            Text(
+              'Remaining: $remainingSlots',
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (images.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.collections_outlined, color: Colors.grey.shade500),
+                const SizedBox(height: 8),
+                const Text(
+                  'No supporting images yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: List.generate(images.length, (index) {
+              final file = File(images[index].path);
+              return Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      file,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: InkWell(
+                        onTap: () => onRemove(index),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+      ],
+    );
+  }
+}
+
+class _MapPicker extends StatefulWidget {
+  const _MapPicker({required this.initialPosition});
+
+  final latlng.LatLng initialPosition;
+
+  @override
+  State<_MapPicker> createState() => _MapPickerState();
+}
+
+class _MapPickerState extends State<_MapPicker> {
+  late latlng.LatLng _tempSelection;
+  final MapController _mapController = MapController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tempSelection = widget.initialPosition;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 48,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Select Location on Map',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: widget.initialPosition,
+                    initialZoom: 16,
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                    ),
+                    onTap: (_, point) {
+                      setState(() => _tempSelection = point);
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'utm_report_system',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _tempSelection,
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.topCenter,
+                          child: const Icon(
+                            Icons.location_pin,
+                            size: 48,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Lat: ${_tempSelection.latitude.toStringAsFixed(5)}, '
+              'Lng: ${_tempSelection.longitude.toStringAsFixed(5)}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).pop(_tempSelection),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Use This Location'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -55,3 +55,15 @@ By integrating **AI-powered image recognition** and **real-time data sharing**, 
 | **Competitors** | Similar apps (SafeZone, CampusShield) lack localized AI integration and UTM-specific functionality. |
 
 ---
+
+## 🧱 System Architecture
+
+```mermaid
+graph TD
+    A[Flutter Mobile App] -->|API Calls| B[.NET Backend]
+    B -->|Data Storage| C[Firebase Database]
+    B --> D[Laravel Admin Portal]
+    C --> D
+    D -->|Heatmap Visualization| E[Security Staff Dashboard]
+    A -->|Emergency Contact| F[UTM Security Team]
+
