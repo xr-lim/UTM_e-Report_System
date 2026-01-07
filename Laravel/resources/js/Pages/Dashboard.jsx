@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ChatBox from '@/Components/ChatBox';
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { signOut, onAuthStateChanged } from "firebase/auth";
@@ -112,7 +113,7 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
       <div className="flex-1 flex flex-col items-center justify-center">
         {/* CSS Conic Gradient Pie Chart */}
         <div className="relative w-48 h-48 rounded-full shadow-lg transition-transform hover:scale-105 duration-300"
-            style={{ background: `conic-gradient(#1B56FD ${trafficPercent}%, #EF4444 ${trafficPercent}% 100%)` }}>
+          style={{ background: `conic-gradient(#1B56FD ${trafficPercent}%, #EF4444 ${trafficPercent}% 100%)` }}>
           <div className="absolute inset-8 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
             <span className="text-4xl font-extrabold text-gray-900">{totalReports}</span>
             <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">Total Reports</span>
@@ -212,7 +213,13 @@ const RecentTable = ({ reports }) => (
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering tr onClick
+                      router.visit(route('report.view', { reportId: report.id }));
+                    }}
+                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md"
+                  >
                     View Details
                   </button>
                 </td>
@@ -385,21 +392,21 @@ export default function Dashboard() {
           hour12: true, // Use AM/PM format
         });
 
-                // Safely map and flatten Firestore objects
-                return {
-                    id: doc.id,
-                    title:  fetchedDetails.fullDescription.substring(0, 50) || 'New Report', 
-                    type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-                    status: data.status || 'Pending',
-                    reporterName: data.reporter.id || 'Anonymous',
-                    timeAgo: formattedDateTime,
-                    location: data.location || null,
-                    ...fetchedDetails,
-                };
-            });
-            
-            // Resolve all promises
-            const reportsList = await Promise.all(reportsPromises);
+        // Safely map and flatten Firestore objects
+        return {
+          id: doc.id,
+          title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
+          type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+          status: data.status || 'Pending',
+          reporterName: data.reporter.id || 'Anonymous',
+          timeAgo: formattedDateTime,
+          location: data.location || null,
+          ...fetchedDetails,
+        };
+      });
+
+      // Resolve all promises
+      const reportsList = await Promise.all(reportsPromises);
 
       // Update KPI Data
       setKpiData([
@@ -462,7 +469,6 @@ export default function Dashboard() {
                 <h3 className="font-bold text-gray-800 text-lg">Incident Heatmap</h3>
                 <p className="text-xs text-gray-500">Visual density of reported locations across campus</p>
               </div>
-
               {/* Pass your reports state here */}
               <ReportHeatmap reports={reports} />
             </div>
@@ -481,7 +487,7 @@ export default function Dashboard() {
           <RecentTable reports={reports.slice(0, 10)} />
           {reports.length > 10 && (
             <div className="flex justify-center pb-4">
-              <button 
+              <button
                 onClick={() => router.visit(route('reports.index'))}
                 className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-[#1B56FD] font-bold text-sm rounded-xl shadow-sm hover:bg-gray-50 hover:shadow-md transition-all active:scale-95"
               >
@@ -490,7 +496,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-        
+
 
       </div>
     );
@@ -502,11 +508,14 @@ export default function Dashboard() {
       <Head title="Dashboard" />
 
       {/* Main Content Area */}
-      <div className="py-12 min-h-screen bg-[#F4F6F9] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/40 via-[#F4F6F9] to-[#F4F6F9]">
+      <div className="py-8 min-h-screen bg-[#F4F6F9]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
           {renderContent()}
         </div>
       </div>
+
+      {/* AI Incident Assistant ChatBox */}
+      <ChatBox />
     </AuthenticatedLayout>
   );
 }

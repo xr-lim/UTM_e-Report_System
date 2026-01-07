@@ -407,22 +407,29 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
 
       // Save document with description and face enlarged image
       debugPrint('Saving to Firestore...');
-      await docRef.set({
-        'category': _selectedCategory,
-        'created_at': FieldValue.serverTimestamp(),
-        'description':
-            _descriptionController.text.trim().isEmpty
-                ? null
-                : _descriptionController.text.trim(),
-        'image_with_face': imageWithCpUrl,
-        'suspect_face_enlarged': suspectFaceEnlargedUrl,
-        'location': location,
-        'location_label': _locationLabel,
-        'reporter': reporterRef,
-        'status': 'pending',
-        'supporting_images': supportingImages,
-        'type': 'suspicious',
-      });
+      debugPrint('Document path: suspicious_reports/${docRef.id}');
+      try {
+        await docRef.set({
+          'category': _selectedCategory,
+          'created_at': FieldValue.serverTimestamp(),
+          'description':
+              _descriptionController.text.trim().isEmpty
+                  ? null
+                  : _descriptionController.text.trim(),
+          'image_with_face': imageWithCpUrl,
+          'suspect_face_enlarged': suspectFaceEnlargedUrl,
+          'location': location,
+          'location_label': _locationLabel,
+          'reporter': reporterRef,
+          'status': 'pending',
+          'supporting_images': supportingImages,
+          'type': 'suspicious',
+        });
+        debugPrint('✅ Firestore save completed for: ${docRef.id}');
+      } catch (firestoreError) {
+        debugPrint('❌ FIRESTORE SAVE ERROR: $firestoreError');
+        rethrow;
+      }
 
       if (!mounted) return;
       _showSnackBar('Report submitted successfully.');
