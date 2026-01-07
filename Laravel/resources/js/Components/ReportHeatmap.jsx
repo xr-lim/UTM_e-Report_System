@@ -130,7 +130,7 @@ const ReportHeatmap = ({ reports, showPins }) => {
                                         <span className="font-bold uppercase text-xs">{report.type}</span>
                                     </div>
                                     <Link 
-                                        href={route('report.view', report.id)}
+                                        href={route('report.view', { reportId: report.id, reportType: report.type })}
                                         className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-mono block break-all"
                                     >
                                         ID: {report.id}

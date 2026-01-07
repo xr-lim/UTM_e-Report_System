@@ -5,7 +5,6 @@ import {
     getFirestore,
     doc,
     getDoc,
-    DocumentReference,
     updateDoc,
     Timestamp
 } from "firebase/firestore";
@@ -16,59 +15,29 @@ import PrimaryButton from '@/Components/PrimaryButton';
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
 
-// --- Helper Functions ---
-const fetchReportDetails = async (reportData) => {
-    let details = {
-        fullDescription: (typeof reportData.description === 'string' ? reportData.description : 'Pending details fetch...') || 'No description found.',
-        plateNo: 'N/A',
-        suspiciousDetails: 'N/A',
-    };
-    
-    let descriptionRef = reportData.description;
-
-    if (descriptionRef instanceof DocumentReference) {
-        try {
-            const descSnap = await getDoc(descriptionRef); 
-            
-            if (descSnap.exists()) {
-                const descData = descSnap.data();
-
-                details.fullDescription = descData.description || 'No detailed description.';
-                if (reportData.type?.toLowerCase() === 'traffic') {
-                    details.plateNo = descData.plate_no || 'N/A';
-                } else if (reportData.type?.toLowerCase() === 'suspicious') {
-                    details.suspiciousDetails = 
-                        `Gender: ${descData.gender || 'N/A'}, Cloth: ${descData.cloth_color || 'N/A'}, Height: ${descData.height || 'N/A'}`;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to fetch detailed report data from reference:", e);
-            details.fullDescription = 'Error fetching details. (Check SDK/Permission)';
-        }
-    }
-    return details;
-};
-
 // --- Main Component ---
-
-export default function ReportDetail({ auth, reportId }) {
+export default function ReportDetail({ auth, reportId, reportType }) {
     const [report, setReport] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentStatus, setCurrentStatus] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-
-    const statusOptions = ['pending', 'in review', 'resolved', 'rejected'];
     const [selectedImage, setSelectedImage] = useState(null);
+    const statusOptions = ['pending', 'in review', 'resolved', 'rejected'];
 
     useEffect(() => {
-        setIsLoading(true);
-        setError(null);
-        
         const fetchReport = async () => {
+            setIsLoading(true);
+            setError(null);
+
             try {
-                // Fetch the main report document
-                const reportRef = doc(db, "reports", reportId);
+                // Determine collection name based on the type passed from the table
+                const collectionName = reportType?.toLowerCase() === 'traffic' 
+                    ? "traffic_reports" 
+                    : "suspicious_reports";
+
+                // Fetch the report document
+                const reportRef = doc(db, collectionName, reportId);
                 const reportSnap = await getDoc(reportRef);
 
                 if (!reportSnap.exists()) {
@@ -78,40 +47,38 @@ export default function ReportDetail({ auth, reportId }) {
                 }
                 
                 const data = reportSnap.data();
-                const fetchedDetails = await fetchReportDetails(data);
-                const isTraffic = data.type?.toLowerCase() === 'traffic';
+                const isTraffic = reportType?.toLowerCase() === 'traffic';
 
-                let primary_image = null;
-                if (isTraffic) {
-                    primary_image = data.image_with_cp;
-                } else {
-                    primary_image = data.suspect_face_enlarged || data.image_with_face || null;
+                let primary_image = isTraffic 
+                    ? data.image_with_cp 
+                    : (data.suspect_face_enlarged || data.image_with_face);
+
+                const supporting_images = [];
+                if (data.supporting_images && Array.isArray(data.supporting_images)) {
+                    supporting_images.push(...data.supporting_images);
                 }
-
-                const supporting_images =[];
-                if (!isTraffic && data.image_with_face) {
+                if (!isTraffic && data.image_with_face && !supporting_images.includes(data.image_with_face)) {
                     supporting_images.push(data.image_with_face);
-                }
-                if (data.supporting_image && Array.isArray(data.supporting_image)) {
-                    supporting_images.push(...data.supporting_image);
                 }
 
                 // Combine and format the final report object
-                const combinedReport = {
+                const finalReport = {
                     id: reportSnap.id,
-                    type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-                    category: data.category,
+                    type: isTraffic ? 'Traffic' : 'Suspicious',
+                    category: data.category || 'N/A',
                     status: data.status || 'pending',
                     reporterId: data.reporter?.id || 'Anonymous',
                     time: data.created_at?.toDate ? data.created_at.toDate().toLocaleString('en-US') : 'N/A',
-                    primary_image: primary_image,
+                    description: data.description || 'No description provided.',
+                    plateNo: data.plate_number || 'N/A',
+                    primary_image,
                     image_with_face: data.image_with_face || null,
                     supporting_image: supporting_images || [],
                     location: data.location || null,
-                    ...fetchedDetails,
+                    location_label: data.location_label || 'Unknown location'
                 };
-                setReport(combinedReport);
-                setCurrentStatus(combinedReport.status);
+                setReport(finalReport);
+                setCurrentStatus(finalReport.status);
             } catch (err) {
                 console.error("Failed to fetch report details:", err);
                 setError(`Failed to load report: ${err.message}`);
@@ -120,14 +87,15 @@ export default function ReportDetail({ auth, reportId }) {
             }
         };
         fetchReport();
-    }, [reportId]);
+    }, [reportId, reportType]);
 
     // --- Status Update Handler ---
     const handleSaveStatus = async () => {
         if (!report || currentStatus === report.status) return;
         setIsSaving(true);
         try {
-            const reportRef = doc(db, "reports", reportId);
+            const collectionName = report.type.toLowerCase() === 'traffic' ? "traffic_reports" : "suspicious_reports";
+            const reportRef = doc(db, collectionName, reportId);
             await updateDoc(reportRef, {
                 status: currentStatus,
                 updated_at: Timestamp.now(),
@@ -189,9 +157,14 @@ export default function ReportDetail({ auth, reportId }) {
             user={auth.user}
             header={
                 <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                        Report: {report.id} <span className={ report.type === 'Traffic' ? 'text-blue-600' : 'text-red-600'}>({report.type})</span>
-                    </h2>
+                    <div>
+                        <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                            Report: {report.id} <span className={ report.type === 'Traffic' ? 'text-blue-600' : 'text-red-600'}>({report.type})</span>
+                        </h2>
+                        <p className="text-sm text-gray-500 font-medium mt-1">
+                            Category: {report.category}
+                        </p>
+                    </div>
                     <PrimaryButton 
                         onClick={() => router.visit(route('reports.index'))}
                         className="bg-gray-500 hover:bg-gray-600 px-4 py-2"
@@ -325,7 +298,7 @@ export default function ReportDetail({ auth, reportId }) {
                                 <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
                                     <p className="font-semibold text-gray-700 mb-2">Category: {report.category}</p>
                                     <p className="font-semibold text-gray-700 mb-2">Description:</p>
-                                    <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">{report.fullDescription}</p>
+                                    <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">{report.description}</p>
                                 </div>
 
                                 {/* Traffic Specific Detail */}
@@ -334,16 +307,6 @@ export default function ReportDetail({ auth, reportId }) {
                                         <span className="inline-flex items-center text-lg font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md border border-blue-100">
                                             <Car size={20} className="mr-2" />
                                             Plate Number: {report.plateNo}
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {/* Suspicious Specific Details */}
-                                {!isTraffic && report.suspiciousDetails !== 'N/A' && (
-                                    <div className="mt-4">
-                                        <span className="inline-flex items-center text-lg font-bold text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-100">
-                                            <Eye size={20} className="mr-2" />
-                                            Suspect Info: {report.suspiciousDetails}
                                         </span>
                                     </div>
                                 )}
@@ -394,6 +357,9 @@ export default function ReportDetail({ auth, reportId }) {
                                                 ) : (
                                                     <div className="h-full flex items-center justify-center text-gray-400">No Location Data</div>
                                                 )}
+                                            </div>
+                                            <div className="p-3 bg-white text-[11px] text-black-500 border-t">
+                                                {report.location_label}
                                             </div>
                                         </div>
                                     </p>

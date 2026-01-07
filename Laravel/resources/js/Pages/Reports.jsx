@@ -59,7 +59,7 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort, className = "" })
 };
 
 // --- Report Table Component ---
-const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery, onSearchChange, sortConfig, onSort }) => {
+const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSearchChange, sortConfig, onSort }) => {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     return (
@@ -110,17 +110,19 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-black/5 text-[11px] uppercase tracking-widest font-semibold text-gray-400">
-                            <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={onSort} className="pl-8" />
-                            <SortableHeader label="Type" sortKey="type" currentSort={sortConfig} onSort={onSort} />
-                            <SortableHeader label="Time" sortKey="createdAt" currentSort={sortConfig} onSort={onSort} />
-                            <SortableHeader label="Reporter" sortKey="reporterID" currentSort={sortConfig} onSort={onSort} />
-                            <SortableHeader label="Details" sortKey="description" currentSort={sortConfig} onSort={onSort} />
+                            <th className="pl-8 pr-4 py-4">Report ID</th>
+                            <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={onSort} className="px-2" />
+                            <SortableHeader label="Type" sortKey="type" currentSort={sortConfig} onSort={onSort} className="px-2" />
+                            <SortableHeader label="Time" sortKey="createdAt" currentSort={sortConfig} onSort={onSort} className="px-4" />
+                            <SortableHeader label="Reporter" sortKey="reporterID" currentSort={sortConfig} onSort={onSort} className="px-4" />
+                            <SortableHeader label="Details" sortKey="description" currentSort={sortConfig} onSort={onSort} className="px-4" />
+                            <th className="px-8 py-4 text-right"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50/50">
                         {reports.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="px-6 py-24 text-center">
+                                <td colSpan="7" className="px-6 py-24 text-center">
                                     <div className="flex flex-col items-center justify-center opacity-40">
                                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                                             <Filter size={24} className="text-gray-400" />
@@ -133,10 +135,15 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                             reports.map((report) => (
                                 <tr
                                     key={report.id}
-                                    onClick={() => onView(report.id, report.type)}
+                                    onClick={() => router.visit(route('report.view', { reportId: report.id, reportType: report.type }))}
                                     className="group hover:bg-blue-50/30 transition-colors duration-200 cursor-pointer border-b border-gray-100 last:border-0"
                                 >
-                                    <td className="px-8 py-5 align-middle">
+                                    <td className="pl-8 pr-4 py-5 align-middle">
+                                        <span className="text-sm font-medium text-gray-700 font-mono">
+                                            {report.id}
+                                        </span>
+                                    </td>   
+                                    <td className="px-2 py-5 align-middle">
                                         <GlassBadge
                                             type={
                                                 report.status.toLowerCase() === 'resolved' ? 'success' :
@@ -145,7 +152,7 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             label={report.status}
                                         />
                                     </td>
-                                    <td className="px-6 py-5 align-middle">
+                                    <td className="px-2 py-5 align-middle">
                                         <GlassBadge
                                             type={report.type.toLowerCase()}
                                             label={report.type.toUpperCase()}
@@ -153,7 +160,7 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             minWidth="min-w-[120px]"
                                         />
                                     </td>
-                                    <td className="px-6 py-5 align-middle">
+                                    <td className="px-4 py-5 align-middle">
                                         <span className="text-sm font-medium text-gray-700 font-mono">
                                             {report.createdAt.toLocaleString('en-US', {
                                                 day: 'numeric',
@@ -165,7 +172,7 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             })}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-5 align-middle">
+                                    <td className="px-4 py-5 align-middle">
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400">
                                                 <User size={12} />
@@ -177,7 +184,7 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-5 align-middle max-w-xs">
+                                    <td className="px-4 py-5 align-middle max-w-xs">
                                         <div>
                                             <div className="font-medium text-sm text-gray-900 truncate" description={report.description}>
                                                 {report.description}
@@ -240,6 +247,7 @@ export default function Reports() {
                     type: type,
                     description: displayDescription.substring(0, 50) || 'No Description',
                     reporterID: data.reporter?.id || 'Anonymous',
+                    plateNo: data.plate_number || 'N/A',
                     timeAgo: createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
                              ' ' + createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
                     createdAt: createdDate,
@@ -331,10 +339,6 @@ export default function Reports() {
         return result;
     }, [allReports, searchQuery, sortConfig, filterType]);
 
-    const handleViewReport = (reportId, reportType) => {
-        router.visit(route('report.view', { id: reportId, type: reportType }));
-    };
-
     return (
         <AuthenticatedLayout>
             <Head title="Reports" />
@@ -358,7 +362,6 @@ export default function Reports() {
                     ) : (
                         <ReportsTable
                             reports={processedReports}
-                            onView={handleViewReport}
                             filterType={filterType}
                             onFilterChange={setFilterType}
                             searchQuery={searchQuery}
