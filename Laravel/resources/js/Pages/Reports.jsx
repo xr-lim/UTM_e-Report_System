@@ -108,8 +108,7 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
             {/* Header / Controls Area */}
             <div className="px-8 py-6 border-b border-black/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6">
                 <div>
-                    <h3 className="font-bold text-gray-900 text-xl tracking-tight">All Reports</h3>
-                    <p className="text-sm text-gray-500 mt-1 font-medium">Manage and view all submitted incidents</p>
+                    <h3 className="font-bold text-gray-900 text-xl tracking-tight">All Reports ({reports.length})</h3>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 items-center">

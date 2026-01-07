@@ -100,8 +100,8 @@ const HeatmapSection = () => (
 );
 
 const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
-  const trafficPercent = totalReports ? Math.round((trafficCount / totalReports) * 100) : 0;
-  const suspiciousPercent = totalReports ? 100 - trafficPercent : 0;
+  const trafficPercent = totalReports > 0 ? Math.round((trafficCount / totalReports) * 100) : 0;
+  const suspiciousPercent = totalReports > 0 ? 100 - trafficPercent : 0;
   const total = totalReports || 0;
 
   return (
@@ -111,10 +111,10 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
 
       <div className="flex-1 flex flex-col items-center justify-center">
         {/* CSS Conic Gradient Pie Chart */}
-        <div className="relative w-48 h-48 rounded-full transition-transform hover:scale-105 duration-300"
-          style={{ background: `conic-gradient(#1B56FD 0% 60%, #f43f5e 60% 100%)` }}>
-          <div className="absolute inset-8 bg-white rounded-full flex flex-col items-center justify-center border border-gray-100">
-            <span className="text-4xl font-extrabold text-gray-900">105</span>
+        <div className="relative w-48 h-48 rounded-full shadow-lg transition-transform hover:scale-105 duration-300"
+            style={{ background: `conic-gradient(#1B56FD ${trafficPercent}%, #EF4444 ${trafficPercent}% 100%)` }}>
+          <div className="absolute inset-8 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
+            <span className="text-4xl font-extrabold text-gray-900">{totalReports}</span>
             <span className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mt-1">Total Reports</span>
           </div>
         </div>
@@ -122,17 +122,17 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
         <div className="mt-8 w-full space-y-3">
           <div className="flex justify-between items-center p-4 bg-blue-50/50 rounded-xl border border-blue-100">
             <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-[#1B56FD] mr-3"></div>
-              <span className="text-gray-700 text-sm font-medium">Traffic Issues</span>
+              <div className="w-3 h-3 rounded-full bg-[#1B56FD] mr-3 shadow-sm"></div>
+              <span className="text-gray-700 text-sm font-medium">Traffic ({trafficCount})</span>
             </div>
-            <span className="font-bold text-[#1B56FD]">60%</span>
+            <span className="font-bold text-[#1B56FD]">{trafficPercent}%</span>
           </div>
           <div className="flex justify-between items-center p-4 bg-rose-50/50 rounded-xl border border-rose-100">
             <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-rose-500 mr-3"></div>
-              <span className="text-gray-700 text-sm font-medium">Suspicious Activity</span>
+              <div className="w-3 h-3 rounded-full bg-red-500 mr-3 shadow-sm"></div>
+              <span className="text-gray-700 text-sm font-medium">Suspicious ({suspiciousCount})</span>
             </div>
-            <span className="font-bold text-rose-500">40%</span>
+            <span className="font-bold text-red-500">{suspiciousPercent}%</span>
           </div>
         </div>
       </div>
@@ -385,23 +385,21 @@ export default function Dashboard() {
           hour12: true, // Use AM/PM format
         });
 
-        // Safely map and flatten Firestore objects
-        return {
-          id: doc.id,
-          title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
-          type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-          status: data.status || 'Pending',
-          reporterName: data.reporter.id || 'Anonymous',
-          timeAgo: formattedDateTime,
-          location: data.location || null, // Required for heatmap pins
-
-          // --- Dynamic Fields Added to Final Object ---
-          ...fetchedDetails,
-        };
-      });
-
-      // Resolve all promises
-      const reportsList = await Promise.all(reportsPromises);
+                // Safely map and flatten Firestore objects
+                return {
+                    id: doc.id,
+                    title:  fetchedDetails.fullDescription.substring(0, 50) || 'New Report', 
+                    type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
+                    status: data.status || 'Pending',
+                    reporterName: data.reporter.id || 'Anonymous',
+                    timeAgo: formattedDateTime,
+                    location: data.location || null,
+                    ...fetchedDetails,
+                };
+            });
+            
+            // Resolve all promises
+            const reportsList = await Promise.all(reportsPromises);
 
       // Update KPI Data
       setKpiData([
@@ -479,7 +477,20 @@ export default function Dashboard() {
         </div>
 
         {/* Row 3: Recent Activity Table */}
-        <RecentTable reports={reports} />
+        <div className="space-y-4">
+          <RecentTable reports={reports.slice(0, 10)} />
+          {reports.length > 10 && (
+            <div className="flex justify-center pb-4">
+              <button 
+                onClick={() => router.visit(route('reports.index'))}
+                className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 text-[#1B56FD] font-bold text-sm rounded-xl shadow-sm hover:bg-gray-50 hover:shadow-md transition-all active:scale-95"
+              >
+                View All Reports →
+              </button>
+            </div>
+          )}
+        </div>
+        
 
       </div>
     );
