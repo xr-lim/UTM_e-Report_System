@@ -1,11 +1,16 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart' as latlng;
+import 'package:utm_report_system/screens/home_screen.dart';
+import '../services/face_detection_service.dart';
 
 class SuspiciousReportScreen extends StatefulWidget {
   const SuspiciousReportScreen({super.key});
@@ -19,7 +24,8 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
 
   final PageController _pageController = PageController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _locationNotesController = TextEditingController();
+  final TextEditingController _locationNotesController =
+      TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
   XFile? _suspectFaceImage;
@@ -39,6 +45,7 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
   String? _locationLabel;
   latlng.LatLng? _selectedLatLng;
   bool _isLocating = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -99,9 +106,9 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _pickSuspectFaceImage(ImageSource source) async {
@@ -147,7 +154,8 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
 
       if (images.length > allowed.length) {
         _showSnackBar(
-            'Only the first ${allowed.length} images were added (limit 5).');
+          'Only the first ${allowed.length} images were added (limit 5).',
+        );
       }
     } catch (e) {
       _showSnackBar('Failed to pick images. Please try again.');
@@ -197,7 +205,8 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
 
     if (permission == LocationPermission.deniedForever) {
       _showSnackBar(
-          'Location permissions are permanently denied. Enable them in settings.');
+        'Location permissions are permanently denied. Enable them in settings.',
+      );
       return false;
     }
 
@@ -213,16 +222,17 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
 
       if (placemarks.isNotEmpty) {
         final placemark = placemarks.first;
-        final parts = [
-          placemark.name,
-          placemark.street,
-          placemark.locality,
-          placemark.administrativeArea,
-        ]
-            .whereType<String>()
-            .map((part) => part.trim())
-            .where((part) => part.isNotEmpty)
-            .toList();
+        final parts =
+            [
+                  placemark.name,
+                  placemark.street,
+                  placemark.locality,
+                  placemark.administrativeArea,
+                ]
+                .whereType<String>()
+                .map((part) => part.trim())
+                .where((part) => part.isNotEmpty)
+                .toList();
         if (parts.isNotEmpty) {
           return parts.join(', ');
         }
@@ -269,10 +279,11 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
     final result = await showModalBottomSheet<latlng.LatLng>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => FractionallySizedBox(
-        heightFactor: 0.9,
-        child: _MapPicker(initialPosition: startingPoint),
-      ),
+      builder:
+          (context) => FractionallySizedBox(
+            heightFactor: 0.9,
+            child: _MapPicker(initialPosition: startingPoint),
+          ),
     );
 
     if (result != null) {
@@ -287,13 +298,158 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
   String _formatCoordinates(latlng.LatLng coords) =>
       '${coords.latitude.toStringAsFixed(5)}, ${coords.longitude.toStringAsFixed(5)}';
 
+  Future<void> _submitReport() async {
+    // Ensure all steps are valid before submitting
+    if (!_validateFirstPage() || !_validateSecondPage()) {
+      _goToPage(!_validateFirstPage() ? 0 : 1);
+      return;
+    }
+
+    if (_isSubmitting) return;
+
+    // Ensure user is authenticated
+    if (FirebaseAuth.instance.currentUser == null) {
+      _showSnackBar('You must be logged in to submit a report.');
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final storage = FirebaseStorage.instance;
+      final auth = FirebaseAuth.instance;
+
+      // Generate unique formatted report ID (S + 6 digits)
+      final countResult =
+          await firestore.collection('suspicious_reports').count().get();
+      int nextNumber = (countResult.count ?? 0) + 1;
+      String reportId = 'S${nextNumber.toString().padLeft(6, '0')}';
+
+      // Verify ID doesn't exist (in case of gaps from deletions)
+      var existingDoc =
+          await firestore.collection('suspicious_reports').doc(reportId).get();
+      while (existingDoc.exists) {
+        nextNumber++;
+        reportId = 'S${nextNumber.toString().padLeft(6, '0')}';
+        existingDoc =
+            await firestore
+                .collection('suspicious_reports')
+                .doc(reportId)
+                .get();
+      }
+
+      // Create document reference with unique ID
+      final docRef = firestore.collection('suspicious_reports').doc(reportId);
+
+      // Upload main image first
+      String? imageWithCpUrl;
+      String? suspectFaceEnlargedUrl;
+      if (_suspectFaceImage != null) {
+        // Upload original image
+        final ref = storage.ref().child(
+          'reports/${docRef.id}/image_with_face.jpg',
+        );
+        await ref.putFile(File(_suspectFaceImage!.path));
+        imageWithCpUrl = await ref.getDownloadURL();
+
+        // Call face detection API to get enlarged face
+        try {
+          debugPrint('Calling face detection API...');
+          final faceResult = await FaceDetectionService.detectAndEnlargeFace(
+            File(_suspectFaceImage!.path),
+          );
+
+          if (faceResult != null) {
+            // Upload the processed face image to Firebase Storage
+            final enlargedRef = storage.ref().child(
+              'reports/${docRef.id}/suspect_face_enlarged.jpg',
+            );
+            await enlargedRef.putData(
+              faceResult.imageBytes,
+              SettableMetadata(contentType: 'image/jpeg'),
+            );
+            suspectFaceEnlargedUrl = await enlargedRef.getDownloadURL();
+            debugPrint('Face enlarged image uploaded successfully');
+          } else {
+            debugPrint('Face detection returned no result');
+          }
+        } catch (e) {
+          // Log but don't fail the entire submission if face detection fails
+          debugPrint('Face detection failed: $e');
+        }
+        debugPrint('Continuing after face detection...');
+      }
+
+      // Upload supporting images
+      debugPrint('Uploading supporting images...');
+      final List<String> supportingImages = [];
+      for (int i = 0; i < _supportingImages.length; i++) {
+        final img = _supportingImages[i];
+        final ref = storage.ref().child(
+          'reports/${docRef.id}/supporting_$i.jpg',
+        );
+        await ref.putFile(File(img.path));
+        final url = await ref.getDownloadURL();
+        supportingImages.add(url);
+      }
+
+      // GeoPoint (matches Firestore)
+      final GeoPoint? location =
+          _selectedLatLng == null
+              ? null
+              : GeoPoint(_selectedLatLng!.latitude, _selectedLatLng!.longitude);
+
+      // Reporter reference
+      final reporterRef = firestore.doc('/users/${auth.currentUser!.uid}');
+
+      // Save document with description and face enlarged image
+      debugPrint('Saving to Firestore...');
+      await docRef.set({
+        'category': _selectedCategory,
+        'created_at': FieldValue.serverTimestamp(),
+        'description':
+            _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
+        'image_with_face': imageWithCpUrl,
+        'suspect_face_enlarged': suspectFaceEnlargedUrl,
+        'location': location,
+        'location_label': _locationLabel,
+        'reporter': reporterRef,
+        'status': 'pending',
+        'supporting_images': supportingImages,
+        'type': 'suspicious',
+      });
+
+      if (!mounted) return;
+      _showSnackBar('Report submitted successfully.');
+
+      // Navigate back to homepage
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false, // Remove all previous routes
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Failed to submit report: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _showSnackBar('Failed to submit: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Suspicious Activity Report'),
-      ),
+      appBar: AppBar(title: const Text('Suspicious Activity Report')),
       body: Column(
         children: [
           const SizedBox(height: 16),
@@ -333,9 +489,10 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
           ),
           const SizedBox(height: 12),
           _SuspectFaceImageCard(
-            imageFile: _suspectFaceImage == null
-                ? null
-                : File(_suspectFaceImage!.path),
+            imageFile:
+                _suspectFaceImage == null
+                    ? null
+                    : File(_suspectFaceImage!.path),
             onUploadTap: () => _pickSuspectFaceImage(ImageSource.gallery),
             onCameraTap: () => _pickSuspectFaceImage(ImageSource.camera),
           ),
@@ -360,17 +517,16 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
           const SizedBox(height: 24),
           DropdownButtonFormField<String>(
             value: _selectedCategory,
-            items: _categories
-                .map(
-                  (category) => DropdownMenuItem(
-                    value: category,
-                    child: Text(category),
-                  ),
-                )
-                .toList(),
-            decoration: const InputDecoration(
-              labelText: 'Category',
-            ),
+            items:
+                _categories
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ),
+                    )
+                    .toList(),
+            decoration: const InputDecoration(labelText: 'Category'),
             onChanged: (value) => setState(() => _selectedCategory = value),
           ),
           const SizedBox(height: 24),
@@ -411,14 +567,17 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
                   backgroundColor: Colors.grey[50],
                   foregroundColor: Colors.black,
                 ),
-                icon: _isLocating
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.my_location),
-                label: Text(_isLocating ? 'Locating...' : 'Use Current Location'),
+                icon:
+                    _isLocating
+                        ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.my_location),
+                label: Text(
+                  _isLocating ? 'Locating...' : 'Use Current Location',
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: _openMapPicker,
@@ -492,8 +651,9 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
               options: MapOptions(
                 initialCenter: _selectedLatLng!,
                 initialZoom: 16,
-                interactionOptions:
-                    const InteractionOptions(flags: InteractiveFlag.none),
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.none,
+                ),
               ),
               children: [
                 TileLayer(
@@ -522,17 +682,17 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
               right: 12,
               top: 12,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   _locationLabel ?? _formatCoordinates(_selectedLatLng!),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -562,27 +722,31 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
                 children: [
                   _buildSummaryRow('Category', _selectedCategory ?? '-'),
                   _buildSummaryRow(
-                      'Description',
-                      _descriptionController.text.trim().isEmpty
-                          ? '-'
-                          : _descriptionController.text.trim()),
+                    'Description',
+                    _descriptionController.text.trim().isEmpty
+                        ? '-'
+                        : _descriptionController.text.trim(),
+                  ),
                   _buildSummaryRow(
-                      'Suspect Face Photo',
-                      _suspectFaceImage == null
-                          ? 'Not provided'
-                          : 'Uploaded'),
+                    'Suspect Face Photo',
+                    _suspectFaceImage == null ? 'Not provided' : 'Uploaded',
+                  ),
                   _buildSummaryRow(
-                      'Supporting Images',
-                      _supportingImages.isEmpty
-                          ? 'None'
-                          : '${_supportingImages.length} image(s)'),
+                    'Supporting Images',
+                    _supportingImages.isEmpty
+                        ? 'None'
+                        : '${_supportingImages.length} image(s)',
+                  ),
                   _buildSummaryRow(
-                      'Location', _locationLabel ?? 'Not provided yet'),
+                    'Location',
+                    _locationLabel ?? 'Not provided yet',
+                  ),
                   _buildSummaryRow(
-                      'Location Notes',
-                      _locationNotesController.text.trim().isEmpty
-                          ? '-'
-                          : _locationNotesController.text.trim()),
+                    'Location Notes',
+                    _locationNotesController.text.trim().isEmpty
+                        ? '-'
+                        : _locationNotesController.text.trim(),
+                  ),
                   _buildSummaryRow('Status', 'Pending'),
                   _buildSummaryRow('Type', 'Suspicious Activity'),
                 ],
@@ -612,9 +776,7 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -635,21 +797,24 @@ class _SuspiciousReportScreenState extends State<SuspiciousReportScreen> {
           if (_currentPage > 0) const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == 2 ? _showSubmitSoon : _nextPage,
+              onPressed:
+                  (_currentPage == 2 && _isSubmitting)
+                      ? null
+                      : (_currentPage == 2 ? _submitReport : _nextPage),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
               ),
-              child: Text(_currentPage == 2 ? 'Submit' : 'Next'),
+              child: Text(
+                _currentPage == 2
+                    ? (_isSubmitting ? 'Submitting...' : 'Submit')
+                    : 'Next',
+              ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  void _showSubmitSoon() {
-    _showSnackBar('Submission flow will be implemented soon.');
   }
 }
 
@@ -671,9 +836,8 @@ class _StepIndicator extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 16,
-                backgroundColor: index <= currentStep
-                    ? Colors.blue
-                    : Colors.grey.shade300,
+                backgroundColor:
+                    index <= currentStep ? Colors.blue : Colors.grey.shade300,
                 child: Text(
                   '${index + 1}',
                   style: TextStyle(
@@ -687,9 +851,8 @@ class _StepIndicator extends StatelessWidget {
                   width: 40,
                   height: 2,
                   margin: const EdgeInsets.symmetric(horizontal: 8),
-                  color: index < currentStep
-                      ? Colors.blue
-                      : Colors.grey.shade300,
+                  color:
+                      index < currentStep ? Colors.blue : Colors.grey.shade300,
                 ),
             ],
           ),
@@ -713,9 +876,7 @@ class _SuspectFaceImageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: Colors.grey[200],
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -728,31 +889,29 @@ class _SuspectFaceImageCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: imageFile == null
-                  ? const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.face_outlined,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Clear photo with suspect\'s face',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
+              child:
+                  imageFile == null
+                      ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.face_outlined,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Clear photo with suspect\'s face',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      )
+                      : ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(imageFile!, fit: BoxFit.cover),
                       ),
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        imageFile!,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -820,9 +979,7 @@ class _SupportingImagesSection extends StatelessWidget {
                 foregroundColor: Colors.black,
               ),
               icon: const Icon(Icons.photo_camera),
-              label: Text(
-                remainingSlots > 0 ? 'Camera' : 'Limit reached',
-              ),
+              label: Text(remainingSlots > 0 ? 'Camera' : 'Limit reached'),
             ),
             OutlinedButton.icon(
               onPressed: remainingSlots > 0 ? onAddFromGallery : null,
@@ -945,10 +1102,7 @@ class _MapPickerState extends State<_MapPicker> {
               children: [
                 const Text(
                   'Select Location on Map',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -1018,5 +1172,3 @@ class _MapPickerState extends State<_MapPicker> {
     );
   }
 }
-
-
