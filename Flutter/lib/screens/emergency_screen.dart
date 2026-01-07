@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:utm_report_system/screens/contact_list_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _primaryColor = Color(0xFF42A5F5);
+const _primaryColor = Color(0xFF0118D8);
 const _accentColor = Color(0xFF1B56FD);
 const _dangerColor = Color(0xFFE53935);
 const _backgroundColor = Color(0xFFF5F7FB);
@@ -18,26 +19,13 @@ class EmergencyScreen extends StatefulWidget {
   State<EmergencyScreen> createState() => _EmergencyScreenState();
 }
 
-class _EmergencyScreenState extends State<EmergencyScreen>
-    with SingleTickerProviderStateMixin {
+class _EmergencyScreenState extends State<EmergencyScreen> {
   late Future<_EmergencyContacts> _contactsFuture;
-  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
     _contactsFuture = _fetchContacts();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
   }
 
   Future<_EmergencyContacts> _fetchContacts() async {
@@ -142,13 +130,17 @@ class _EmergencyScreenState extends State<EmergencyScreen>
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
-                    borderRadius:
-                        BorderRadius.vertical(bottom: Radius.circular(32)),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(32),
+                    ),
                   ),
                   child: Column(
                     children: const [
-                      Icon(Icons.warning_amber_rounded,
-                          size: 54, color: Colors.white),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 54,
+                        color: Colors.white,
+                      ),
                       SizedBox(height: 10),
                       Text(
                         'Emergency',
@@ -161,75 +153,32 @@ class _EmergencyScreenState extends State<EmergencyScreen>
                       SizedBox(height: 6),
                       Text(
                         'Reach out to UTM emergency contacts immediately.',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14.5,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 14.5),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // 🆘 SOS BUTTON
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (_, __) {
-                    final scale = 1 + (_pulseController.value * 0.06);
-                    return Transform.scale(
-                      scale: scale,
-                      child: Container(
-                        width: 150,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [_dangerColor, Color(0xFFD32F2F)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _dangerColor.withOpacity(0.35),
-                              blurRadius: 28,
-                              spreadRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'SOS',
-                            style: TextStyle(
-                              fontSize: 42,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 22),
-
-                // 📞 CONTACTS
+                // 📞 CONTACTS (scrolling list)
                 Expanded(
                   child: ListView(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     children: [
                       _FancyContactCard(
                         title: contacts.pusatName,
                         icon: Icons.local_hospital,
                         phone: contacts.pusatPhone,
                         color: _primaryColor,
-                        onTap: () => _handleCallRequest(
-                          label: contacts.pusatName,
-                          phoneNumber: contacts.pusatPhone,
-                        ),
+                        onTap:
+                            () => _handleCallRequest(
+                              label: contacts.pusatName,
+                              phoneNumber: contacts.pusatPhone,
+                            ),
                       ),
                       const SizedBox(height: 18),
                       _FancyContactCard(
@@ -237,12 +186,80 @@ class _EmergencyScreenState extends State<EmergencyScreen>
                         icon: Icons.shield,
                         phone: contacts.securityPhone,
                         color: _accentColor,
-                        onTap: () => _handleCallRequest(
-                          label: contacts.securityName,
-                          phoneNumber: contacts.securityPhone,
+                        onTap:
+                            () => _handleCallRequest(
+                              label: contacts.securityName,
+                              phoneNumber: contacts.securityPhone,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+
+                // BOTTOM: glassmorphic View full contact list button anchored below the list
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    MediaQuery.of(context).padding.bottom + 16,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.12),
+                          ),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ContactListScreen(),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 16,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Icon(
+                                    Icons.list,
+                                    size: 18,
+                                    color: _accentColor,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'View full contact list',
+                                    style: TextStyle(
+                                      color: _accentColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -312,9 +329,10 @@ class _FancyContactCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 14.5,
               fontWeight: FontWeight.w600,
-              color: phone?.isNotEmpty == true
-                  ? Colors.grey[800]
-                  : Colors.grey[400],
+              color:
+                  phone?.isNotEmpty == true
+                      ? Colors.grey[800]
+                      : Colors.grey[400],
             ),
           ),
           const SizedBox(height: 18),
@@ -322,16 +340,17 @@ class _FancyContactCard extends StatelessWidget {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: onTap,
-              icon: const Icon(Icons.call, size: 18),
+              icon: const Icon(Icons.call, size: 24),
               label: const Text(
                 'Call Now',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: color,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 17),
+                minimumSize: const Size.fromHeight(56),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(17),
                 ),
               ),
             ),
@@ -355,141 +374,4 @@ class _EmergencyContacts {
   final String? pusatPhone;
   final String securityName;
   final String? securityPhone;
-}
-
-class _EmergencyContactCard extends StatelessWidget {
-  const _EmergencyContactCard({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.phoneNumber,
-    required this.onTap,
-  });
-
-  final String title;
-  final String description;
-  final IconData icon;
-  final String? phoneNumber;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _backgroundColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _primaryColor.withOpacity(0.12), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: _primaryColor.withOpacity(0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: _accentColor.withOpacity(0.16),
-            child: Icon(icon, size: 28, color: _primaryColor),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Icon(Icons.phone, size: 20, color: Colors.grey[700]),
-              const SizedBox(width: 8),
-              Text(
-                phoneNumber?.isNotEmpty == true
-                    ? phoneNumber!
-                    : 'Phone number not available',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color:
-                      phoneNumber?.isNotEmpty == true
-                          ? Colors.black87
-                          : Colors.grey[500],
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onTap,
-              style: FilledButton.styleFrom(
-                backgroundColor: _primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              icon: const Icon(Icons.call),
-              label: const Text('Call now'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmergencyError extends StatelessWidget {
-  const _EmergencyError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.wifi_off, size: 48, color: _primaryColor),
-            const SizedBox(height: 16),
-            Text(
-              'We could not load emergency contacts.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: _accentColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
