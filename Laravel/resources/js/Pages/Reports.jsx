@@ -6,11 +6,7 @@ import {
     collection,
     query,
     onSnapshot,
-    doc,
-    getDoc,
-    DocumentReference,
     orderBy,
-    where
 } from "firebase/firestore";
 import { app } from "@/firebaseConfig";
 import { Car, Eye, Filter, ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, User } from 'lucide-react';
@@ -21,43 +17,6 @@ import { GlassInput } from '@/Components/Glass/GlassInput';
 
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
-
-const fetchReportDetails = async (reportData) => {
-    let details = {
-        fullDescription: reportData.description || 'No description found.',
-        plateNo: 'N/A',
-        suspiciousDetails: 'N/A',
-    };
-
-    let descriptionRef = reportData.description;
-
-    if (descriptionRef instanceof DocumentReference) {
-        try {
-            const descSnap = await getDoc(descriptionRef);
-
-            if (descSnap.exists()) {
-                const descData = descSnap.data();
-
-                details.fullDescription = descData.description || 'No detailed description.';
-
-                if (reportData.type?.toLowerCase() === 'traffic') {
-                    details.plateNo = descData.plate_no || 'N/A';
-                }
-                else if (reportData.type?.toLowerCase() === 'suspicious') {
-                    details.suspiciousDetails =
-                        `Gender: ${descData.gender || 'N/A'}, ` +
-                        `Cloth: ${descData.cloth_color || 'N/A'}, ` +
-                        `Height: ${descData.height || 'N/A'}`;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to fetch dynamic report details:", e);
-            details.fullDescription = 'Error fetching details.';
-        }
-    }
-
-    return details;
-};
 
 // --- Helper Components ---
 const TruncatedID = ({ id }) => {
@@ -152,11 +111,10 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                     <thead>
                         <tr className="border-b border-black/5 text-[11px] uppercase tracking-widest font-semibold text-gray-400">
                             <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={onSort} className="pl-8" />
-                            <SortableHeader label="Category" sortKey="category" currentSort={sortConfig} onSort={onSort} />
+                            <SortableHeader label="Type" sortKey="type" currentSort={sortConfig} onSort={onSort} />
                             <SortableHeader label="Time" sortKey="createdAt" currentSort={sortConfig} onSort={onSort} />
-                            <SortableHeader label="Reporter" sortKey="reporterName" currentSort={sortConfig} onSort={onSort} />
-                            <SortableHeader label="Details" sortKey="title" currentSort={sortConfig} onSort={onSort} />
-                            <th className="px-8 py-4 text-right">Action</th>
+                            <SortableHeader label="Reporter" sortKey="reporterID" currentSort={sortConfig} onSort={onSort} />
+                            <SortableHeader label="Details" sortKey="description" currentSort={sortConfig} onSort={onSort} />
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50/50">
@@ -168,7 +126,6 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             <Filter size={24} className="text-gray-400" />
                                         </div>
                                         <p className="font-medium text-gray-900">No reports found</p>
-                                        <p className="text-sm text-gray-500 mt-1">Try adjusting your search or filters</p>
                                     </div>
                                 </td>
                             </tr>
@@ -176,31 +133,31 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                             reports.map((report) => (
                                 <tr
                                     key={report.id}
-                                    onClick={() => onView(report.id)}
+                                    onClick={() => onView(report.id, report.type)}
                                     className="group hover:bg-blue-50/30 transition-colors duration-200 cursor-pointer border-b border-gray-100 last:border-0"
                                 >
                                     <td className="px-8 py-5 align-middle">
                                         <GlassBadge
                                             type={
                                                 report.status.toLowerCase() === 'resolved' ? 'success' :
-                                                    report.status.toLowerCase() === 'pending' ? 'warning' : 'neutral'
+                                                report.status.toLowerCase() === 'pending' ? 'warning' : 'neutral'
                                             }
                                             label={report.status}
                                         />
                                     </td>
                                     <td className="px-6 py-5 align-middle">
                                         <GlassBadge
-                                            type={report.category.toLowerCase()}
-                                            label={report.category.toUpperCase()}
-                                            icon={report.category === 'Traffic' ? Car : Eye}
+                                            type={report.type.toLowerCase()}
+                                            label={report.type.toUpperCase()}
+                                            icon={report.type === 'Traffic' ? Car : Eye}
                                             minWidth="min-w-[120px]"
                                         />
                                     </td>
                                     <td className="px-6 py-5 align-middle">
                                         <span className="text-sm font-medium text-gray-700 font-mono">
                                             {report.createdAt.toLocaleString('en-US', {
-                                                month: 'short',
                                                 day: 'numeric',
+                                                month: 'short',
                                                 year: 'numeric',
                                                 hour: '2-digit',
                                                 minute: '2-digit',
@@ -213,8 +170,8 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                             <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400">
                                                 <User size={12} />
                                             </div>
-                                            {report.reporterName && report.reporterName !== 'Anonymous' ? (
-                                                <TruncatedID id={report.reporterName} />
+                                            {report.reporterID && report.reporterID !== 'Anonymous' ? (
+                                                <TruncatedID id={report.reporterID} />
                                             ) : (
                                                 <span className="text-sm text-gray-500 italic">Anonymous</span>
                                             )}
@@ -222,10 +179,10 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
                                     </td>
                                     <td className="px-6 py-5 align-middle max-w-xs">
                                         <div>
-                                            <div className="font-medium text-sm text-gray-900 truncate" title={report.title}>
-                                                {report.title}
+                                            <div className="font-medium text-sm text-gray-900 truncate" description={report.description}>
+                                                {report.description}
                                             </div>
-                                            {report.category === 'Traffic' && report.plateNo && report.plateNo !== 'N/A' && (
+                                            {report.type === 'Traffic' && report.plateNo && report.plateNo !== 'N/A' && (
                                                 <div className="text-xs font-mono font-medium text-blue-600 mt-1 bg-blue-50/50 inline-block px-1.5 rounded">{report.plateNo}</div>
                                             )}
                                         </div>
@@ -253,63 +210,72 @@ const ReportsTable = ({ reports, onView, filterType, onFilterChange, searchQuery
 // --- Main Reports Component ---
 
 export default function Reports() {
-    const [reports, setReports] = useState([]);
+    const [reportsData, setReportsData] = useState({ Traffic: [], Suspicious: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filterType, setFilterType] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
-    // This hook fetches ALL reports and check filterType
+    const allReports = useMemo(() => {
+        return [...reportsData.Traffic, ...reportsData.Suspicious].sort((a, b) => b.createdAt - a.createdAt);
+    }, [reportsData]);
+
     useEffect(() => {
         setIsLoading(true);
-        setError(null);
 
-        let reportsQuery = collection(db, "reports");
-
-        if (filterType !== 'all') {
-            // Filter by the 'type' field in Firestore.
-            reportsQuery = query(reportsQuery, where("type", "==", filterType));
-        }
-
-        // Apply sorting
-        reportsQuery = query(reportsQuery, orderBy("created_at", "desc"));
-
-        const unsubscribe = onSnapshot(reportsQuery, async (snapshot) => {
-            let reportsPromises = [];
-
-            // Asynchronously fetch linked details for each report
-            reportsPromises = snapshot.docs.map(async (docSnapshot) => {
-                const data = docSnapshot.data();
+        const processDocs = (snapshot, type) => {
+            return snapshot.docs.map(doc => {
+                const data = doc.data();
                 const createdDate = data.created_at?.toDate ? data.created_at.toDate() : new Date();
-
-                const fetchedDetails = await fetchReportDetails(data);
-
+                let displayDescription = 'No Description';
+                if (typeof data.description === 'string') {
+                    displayDescription = data.description;
+                } else if (data.description?.id) {
+                    displayDescription = "[Reference Data]";
+                }
                 return {
-                    id: docSnapshot.id,
-                    title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
-                    category: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-                    status: data.status || 'Pending',
-                    reporterName: data.reporter?.id || 'Anonymous',
-                    timeAgo: createdDate.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
-                    createdAt: createdDate, // Store actual date for sorting
-                    ...fetchedDetails,
+                    id: doc.id,
+                    ...data,
+                    type: type,
+                    description: displayDescription.substring(0, 50) || 'No Description',
+                    reporterID: data.reporter?.id || 'Anonymous',
+                    timeAgo: createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
+                             ' ' + createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                    createdAt: createdDate,
                 };
             });
+        };
 
-            const reportsList = await Promise.all(reportsPromises);
+        const unsubTraffic = onSnapshot(
+            query(collection(db, "traffic_reports"), orderBy("created_at", "desc")), 
+            (snapshot) => {
+                setReportsData(prev => ({
+                    ...prev,
+                    Traffic: processDocs(snapshot, 'Traffic')
+                }));
+                setIsLoading(false);
+            }, 
+            (err) => setError(err.message)
+        );
 
-            setReports(reportsList);
-            setIsLoading(false);
+        const unsubSuspicious = onSnapshot(
+            query(collection(db, "suspicious_reports"), orderBy("created_at", "desc")), 
+            (snapshot) => {
+                setReportsData(prev => ({
+                    ...prev,
+                    Suspicious: processDocs(snapshot, 'Suspicious')
+                }));
+                setIsLoading(false);
+            }, 
+            (err) => setError(err.message)
+        );
 
-        }, (err) => {
-            console.error("Firestore Reports listener failed:", err);
-            setError(`Failed to load reports: ${err.code}. Check permissions.`);
-            setIsLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [filterType]);
+        return () => {
+            unsubTraffic();
+            unsubSuspicious();
+        };
+    }, []);
 
     // Handle sorting
     const handleSort = (key) => {
@@ -321,24 +287,20 @@ export default function Reports() {
 
     // Filter and sort reports using useMemo for performance
     const processedReports = useMemo(() => {
-        let result = [...reports];
+        let result = allReports.filter(r => filterType === 'all' || r.type.toLowerCase() === filterType);
 
         // Apply search filter
         if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase().trim();
-            result = result.filter((report) => {
-                // Search across all relevant fields
+            const q = searchQuery.toLowerCase().trim();
+            result = result.filter((r) => {
                 const searchableFields = [
-                    report.status,
-                    report.category,
-                    report.timeAgo,
-                    report.reporterName,
-                    report.title,
-                    report.id,
-                    report.plateNo,
-                    report.suspiciousDetails,
-                    report.fullDescription,
-                ].filter(Boolean); // Remove null/undefined
+                    r.status,
+                    r.type,
+                    r.reporterID,
+                    r.description,
+                    r.id,
+                    r.plateNo,
+                ].filter(Boolean);
 
                 return searchableFields.some((field) =>
                     field.toString().toLowerCase().includes(query)
@@ -367,12 +329,10 @@ export default function Reports() {
         });
 
         return result;
-    }, [reports, searchQuery, sortConfig]);
+    }, [allReports, searchQuery, sortConfig, filterType]);
 
-    const handleViewReport = (reportId) => {
-        // Redirect to a dedicated view/edit route
-        alert(`Navigating to view report: ${reportId}`);
-        router.visit(route('report.view', reportId));
+    const handleViewReport = (reportId, reportType) => {
+        router.visit(route('report.view', { id: reportId, type: reportType }));
     };
 
     return (

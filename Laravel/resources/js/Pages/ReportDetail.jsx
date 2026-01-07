@@ -190,7 +190,7 @@ export default function ReportDetail({ auth, reportId }) {
             header={
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                        Report: {report.id}
+                        Report: {report.id} <span className={ report.type === 'Traffic' ? 'text-blue-600' : 'text-red-600'}>({report.type})</span>
                     </h2>
                     <PrimaryButton 
                         onClick={() => router.visit(route('reports.index'))}
