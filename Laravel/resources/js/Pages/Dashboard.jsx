@@ -88,16 +88,16 @@ const RecentTable = ({ reports }) => (
       </button>
     </div>
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
+      <table className="w-full text-left border-collapse table-fixed">
         <thead>
           <tr className="border-b border-black/5 text-[11px] uppercase tracking-widest font-semibold text-gray-400 bg-gray-50/50">
-            <th className="px-6 py-4">Report ID</th>
-            <th className="px-8 py-4">Status</th>
-            <th className="px-6 py-4">Type</th>
-            <th className="px-6 py-4">Time</th>
-            <th className="px-6 py-4">Reporter</th>
-            <th className="px-6 py-4">Details</th>
-            <th className="px-8 py-4 text-right"></th>
+            <th className="px-6 py-4 w-[120px]">Report ID</th>
+            <th className="px-8 py-4 w-[110px]">Status</th>
+            <th className="px-6 py-4 w-[130px]">Type</th>
+            <th className="px-6 py-4 w-[180px]">Time</th>
+            <th className="px-6 py-4 w-[150px]">Reporter</th>
+            <th className="px-6 py-4 w-auto">Details</th>
+            <th className="px-8 py-4 text-right w-[60px]"></th>
           </tr>
         </thead>
           <tbody className="divide-y divide-gray-50/50 bg-white">
@@ -112,12 +112,10 @@ const RecentTable = ({ reports }) => (
                   onClick={() => router.visit(route('report.view', { reportId: report.id, reportType: report.type }))}
                   className="group hover:bg-blue-50/30 transition-colors duration-200 cursor-pointer border-b border-gray-100 last:border-0"
                 >
-                  <td className="px-6 py-5 align-middle">
-                    <span className="text-sm font-medium text-gray-700 font-mono">
-                      {report.id}
-                    </span>
+                  <td className="px-6 py-5 align-middle truncate font-mono text-sm">
+                    {report.id}
                   </td>
-                  <td className="px-6 py-5 align-middle">
+                  <td className="px-2 py-5 align-middle">
                     <GlassBadge
                       type={
                         report.status.toLowerCase() === 'resolved' ? 'success' :
@@ -126,7 +124,7 @@ const RecentTable = ({ reports }) => (
                       label={report.status}
                     />
                   </td>
-                  <td className="px-4 py-5 align-middle">
+                  <td className="px-2 py-5 align-middle">
                     <GlassBadge
                       type={report.type.toLowerCase()}
                       label={report.type.toUpperCase()}
@@ -134,12 +132,17 @@ const RecentTable = ({ reports }) => (
                       minWidth="min-w-[120px]"
                     />
                   </td>
-                  <td className="px-6 py-5 align-middle">
-                    <span className="text-sm font-medium text-gray-700 font-mono">
-                      {report.timeAgo}
-                    </span>
+                  <td className="px-4 py-5 align-middle truncate text-sm">
+                    {report.createdAt.toLocaleString('en-US', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
                   </td>
-                  <td className="px-6 py-5 align-middle">
+                  <td className="px-4 py-5 align-middle">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400">
                         <User size={12} />
@@ -147,9 +150,9 @@ const RecentTable = ({ reports }) => (
                       <TruncatedID id={report.reporterID} />
                     </div>
                   </td>
-                  <td className="px-6 py-5 align-middle max-w-xs">
-                    <div>
-                      <div className="font-medium text-sm text-gray-900 truncate" title={report.description}>
+                  <td className="px-4 py-5 align-middle">
+                    <div className="max-w-[400px]">
+                      <div className="font-medium text-sm text-gray-900 truncate" description={report.description}>
                         {report.description}
                       </div>
                       {report.type === 'Traffic' && report.plateNo && report.plateNo !== 'N/A' && (

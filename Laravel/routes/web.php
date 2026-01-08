@@ -31,11 +31,23 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->name('dashboard');
 
+// Reports List
 Route::get('/reports', function () {
     return Inertia::render('Reports');
 })->name('reports.index');
 
+// Report Detail
 Route::get('/reports/{reportType}/{reportId}', function ($reportType, $reportId) {
     // Pass the report ID and type as props to the React component
     return Inertia::render('ReportDetail', ['reportId' => $reportId, 'reportType' => $reportType]);
 })->name('report.view');
+
+// Feedbacks List
+Route::get('/feedback', function () {
+    return Inertia::render('Feedbacks');
+})->name('feedbacks.index');
+
+// Feedback Detail
+Route::get('/feedback/{id}', function ($id) {
+    return Inertia::render('FeedbackDetail', ['feedbackId' => $id]);
+})->name('feedback.view');
