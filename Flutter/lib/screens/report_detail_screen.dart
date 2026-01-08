@@ -19,11 +19,23 @@ class ReportDetailScreen extends StatelessWidget {
     final type = (data['type'] as String?)?.toLowerCase() ?? '';
     final category = (data['category'] as String?)?.trim() ?? '';
     final description = (data['description'] as String?)?.trim() ?? '';
-    final imageWithCp = (data['image_with_cp'] as String?) ?? '';
-    final supporting = (data['supporting_image'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        <String>[];
+
+    // support multiple possible image fields used by different collections
+    final imageWithCp = (data['image_with_cp'] as String?) ??
+      (data['image_with_face'] as String?) ??
+      (data['image_with_vehicle'] as String?) ??
+      '';
+
+    // supporting images may be stored under different keys
+    final rawSupporting = (data['supporting_images'] as List?) ??
+      (data['supporting_image'] as List?) ??
+      (data['supporting'] as List?) ??
+      <dynamic>[];
+    final supporting = rawSupporting.map((e) => e.toString()).toList();
+
+    // suspect/enlarged face image (suspicious reports)
+    final suspectFaceEnlarged = (data['suspect_face_enlarged'] as String?) ?? '';
+
     final plate = (data['plate_number'] as String?) ?? '';
     final status = (data['status'] as String?) ?? '';
     final locationVal = data['location'];
@@ -45,6 +57,17 @@ class ReportDetailScreen extends StatelessWidget {
       } else if (locationVal['lat'] != null && locationVal['lng'] != null) {
         lat = (locationVal['lat'] as num).toDouble();
         lng = (locationVal['lng'] as num).toDouble();
+      }
+    } else if (locationVal is String) {
+      // parse common string formats like '37.4219983° N, 122.084° W' or '37.4219983, -122.084'
+      final s = locationVal;
+      final nums = RegExp(r'[-+]?\d+\.?\d*').allMatches(s).map((m) => double.parse(m.group(0)!)).toList();
+      if (nums.length >= 2) {
+        lat = nums[0];
+        lng = nums[1];
+        // adjust sign according to direction letters if present
+        if (RegExp(r'[Ss]').hasMatch(s)) lat = -lat!.abs();
+        if (RegExp(r'[Ww]').hasMatch(s)) lng = -lng!.abs();
       }
     }
 
@@ -157,6 +180,12 @@ class ReportDetailScreen extends StatelessWidget {
                 _sectionTitle('Image with CP'),
                 const SizedBox(height: 12),
                 _networkImage(imageWithCp),
+              ],
+              if (suspectFaceEnlarged.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _sectionTitle('Suspect Face'),
+                const SizedBox(height: 12),
+                _networkImage(suspectFaceEnlarged),
               ],
               if (supporting.isNotEmpty) ...[
                 const SizedBox(height: 24),
