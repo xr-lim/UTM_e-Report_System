@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ChatBox from '@/Components/ChatBox';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import {
@@ -10,28 +10,19 @@ import {
   onSnapshot,
   doc,
   getDoc,
-  DocumentReference,
   orderBy,
   Timestamp
 } from "firebase/firestore";
 import { auth, app } from "@/firebaseConfig";
-import { AlertTriangle, Bell, Car, Eye, MapPin, MessageSquare, ChevronRight, User, View } from 'lucide-react';
+import { AlertTriangle, Bell, Car, Eye, MessageSquare, ChevronRight, User, X } from 'lucide-react';
 import { GlassBadge } from '@/Components/Glass/GlassBadge';
+import { GlassCard } from '@/Components/Glass/GlassCard';
 import ReportHeatmap from '@/Components/ReportHeatmap';
 
 // --- Initialize Firebase Services ---
 const db = getFirestore(app);
 
-// --- Constants & Theme Colors ---
-// Theme: Deep Blue (#0118D8), Bright Blue (#1B56FD), White, Light Grey
-const THEME = {
-  primary: '#0118D8',
-  accent: '#1B56FD',
-  bg: '#F4F6F9',
-};
-
 // --- Sub-Components ---
-
 const KPICard = ({ label, value, icon: Icon, color, bg }) => (
   <div className="bg-white p-6 rounded-2xl border border-gray-200 flex items-center justify-between hover:border-gray-300 transition-colors">
     <div>
@@ -44,66 +35,9 @@ const KPICard = ({ label, value, icon: Icon, color, bg }) => (
   </div>
 );
 
-const HeatmapSection = () => (
-  <div className="bg-white rounded-2xl border border-gray-200 flex flex-col h-full overflow-hidden">
-    <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
-      <div>
-        <h3 className="font-bold text-gray-900 text-xl tracking-tight flex items-center">
-          <MapPin size={20} className="mr-2 text-[#1B56FD]" />
-          Interactive Heatmap
-        </h3>
-        <p className="text-sm text-gray-500 mt-1 ml-7 font-medium">Visualizing report density across campus</p>
-      </div>
-
-      {/* Filter Toggles */}
-      <div className="flex bg-gray-100 p-1 rounded-xl">
-        <button className="flex items-center px-4 py-2 bg-white rounded-lg text-xs font-semibold text-blue-700 border border-gray-200">
-          <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-          Traffic
-        </button>
-        <button className="flex items-center px-4 py-2 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors">
-          <span className="w-2 h-2 rounded-full bg-rose-500 mr-2 opacity-50"></span>
-          Suspicious
-        </button>
-      </div>
-    </div>
-
-    <div className="relative flex-1 bg-gray-50 min-h-[350px] overflow-hidden group">
-      {/* Map Base - Grid Pattern */}
-      <div className="absolute inset-0 bg-[#e8ecf2]"
-        style={{ backgroundImage: 'linear-gradient(#d1d5db 1px, transparent 1px), linear-gradient(90deg, #d1d5db 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
-      </div>
-
-      {/* Campus Landmarks */}
-      <div className="absolute top-10 left-20 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 uppercase tracking-widest">Main Library</div>
-      <div className="absolute bottom-20 right-32 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 uppercase tracking-widest">Student Union</div>
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-gray-600 uppercase tracking-widest">Eng. Faculty</div>
-
-      {/* Heat Spots - Traffic (Blue) */}
-      <div className="absolute top-[30%] left-[25%]">
-        <div className="w-32 h-32 bg-blue-600/20 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute top-8 left-8 w-16 h-16 bg-blue-600/30 rounded-full blur-lg"></div>
-        <MapPin size={24} className="absolute top-12 left-12 text-blue-700" fill="#1B56FD" />
-      </div>
-
-      <div className="absolute top-[50%] right-[15%]">
-        <div className="w-24 h-24 bg-blue-600/20 rounded-full blur-xl"></div>
-        <MapPin size={24} className="absolute top-8 left-8 text-blue-700" fill="#1B56FD" />
-      </div>
-
-      {/* Controls Overlay */}
-      <div className="absolute bottom-4 right-4 bg-white border border-gray-200 p-1.5 rounded-xl flex flex-col space-y-1">
-        <button className="w-7 h-7 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 font-bold transition-colors">+</button>
-        <button className="w-7 h-7 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-lg text-gray-600 font-bold transition-colors">-</button>
-      </div>
-    </div>
-  </div>
-);
-
 const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
   const trafficPercent = totalReports > 0 ? Math.round((trafficCount / totalReports) * 100) : 0;
   const suspiciousPercent = totalReports > 0 ? 100 - trafficPercent : 0;
-  const total = totalReports || 0;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-8 h-full flex flex-col">
@@ -142,11 +76,10 @@ const DistributionChart = ({ totalReports, trafficCount, suspiciousCount }) => {
 };
 
 const RecentTable = ({ reports }) => (
-  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-    <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+  <GlassCard className="overflow-hidden shadow-none border border-gray-200">
+    <div className="px-8 py-6 border-b border-black/5 flex justify-between items-center bg-white">
       <div>
         <h3 className="font-bold text-gray-900 text-xl tracking-tight">Recent Reports</h3>
-        <p className="text-sm text-gray-500 mt-1 font-medium">Latest submitted incidents</p>
       </div>
       <button
         onClick={() => router.visit(route('reports.index'))}
@@ -156,30 +89,36 @@ const RecentTable = ({ reports }) => (
       </button>
     </div>
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm text-gray-600">
-        <thead className="bg-gray-50 text-xs uppercase font-bold text-gray-500 tracking-wider">
-          <tr>
-            <th className="px-6 py-4">Status</th>
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b border-black/5 text-[11px] uppercase tracking-widest font-semibold text-gray-400 bg-gray-50/50">
+            <th className="px-6 py-4">Report ID</th>
+            <th className="px-8 py-4">Status</th>
             <th className="px-6 py-4">Type</th>
             <th className="px-6 py-4">Time</th>
             <th className="px-6 py-4">Reporter</th>
             <th className="px-6 py-4">Details</th>
-            <th className="px-8 py-4 text-right">Action</th>
+            <th className="px-8 py-4 text-right"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-50/50 bg-white">
           {reports.length === 0 ? (
             <tr>
-              <td colSpan="6" className="px-6 py-16 text-center text-gray-400">No recent reports found.</td>
+              <td colSpan="7" className="px-6 py-16 text-center text-gray-400">No recent reports found.</td>
             </tr>
           ) : (
             reports.map((report) => (
               <tr
                 key={report.id}
-                onClick={() => router.visit(route('report.view', report.id))}
+                onClick={() => router.visit(route('report.view', { reportId: report.id, reportType: report.type }))}
                 className="group hover:bg-blue-50/30 transition-colors duration-200 cursor-pointer border-b border-gray-100 last:border-0"
               >
-                <td className="px-8 py-5 align-middle">
+                <td className="px-6 py-5 align-middle">
+                  <span className="text-sm font-medium text-gray-700 font-mono">
+                    {report.id}
+                  </span>
+                </td>
+                <td className="px-6 py-5 align-middle">
                   <GlassBadge
                     type={
                       report.status.toLowerCase() === 'resolved' ? 'success' :
@@ -188,7 +127,7 @@ const RecentTable = ({ reports }) => (
                     label={report.status}
                   />
                 </td>
-                <td className="px-6 py-5 align-middle">
+                <td className="px-4 py-5 align-middle">
                   <GlassBadge
                     type={report.type.toLowerCase()}
                     label={report.type.toUpperCase()}
@@ -201,27 +140,26 @@ const RecentTable = ({ reports }) => (
                     {report.timeAgo}
                   </span>
                 </td>
-                <td className="px-6 py-4 font-medium text-gray-900">{report.reporterName || 'N/A'}</td>
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">{report.title}</div>
-                  <div className="text-xs text-gray-400">ID: {report.id}</div>
-                  {report.type === 'Traffic' && report.plateNo && (
-                    <div className="text-xs text-blue-600 font-bold mt-1">Plate No: {report.plateNo}</div>
-                  )}
-                  {report.type === 'Suspicious' && (
-                    <div className="text-xs text-red-600 mt-1">{''}</div>
-                  )}
+                <td className="px-6 py-5 align-middle">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400">
+                      <User size={12} />
+                    </div>
+                    <TruncatedID id={report.reporterID} />
+                  </div>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering tr onClick
-                      router.visit(route('report.view', { reportId: report.id }));
-                    }}
-                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-md text-xs font-medium hover:border-[#1B56FD] hover:text-[#1B56FD] transition-all shadow-sm group-hover:shadow-md"
-                  >
-                    View Details
-                  </button>
+                <td className="px-6 py-5 align-middle max-w-xs">
+                  <div>
+                    <div className="font-medium text-sm text-gray-900 truncate" title={report.description}>
+                      {report.description}
+                    </div>
+                    {report.type === 'Traffic' && report.plateNo && report.plateNo !== 'N/A' && (
+                      <div className="text-xs font-mono font-medium text-blue-600 mt-1 bg-blue-50/50 inline-block px-1.5 rounded">{report.plateNo}</div>
+                    )}
+                  </div>
+                </td>
+                <td className="px-8 py-5 align-middle text-right">
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors ml-auto" />
                 </td>
               </tr>
             ))
@@ -229,17 +167,10 @@ const RecentTable = ({ reports }) => (
         </tbody>
       </table>
     </div>
-  </div>
+  </GlassCard>
 );
 
 // --- Helper Functions ---
-
-const getTimeAgo = (timestamp) => {
-  if (!timestamp) return 'N/A';
-  // Logic to calculate time difference
-  // For simplicity, we'll return a placeholder string for now
-  return "just now";
-};
 
 const fetchUserRole = async (uid) => {
   try {
@@ -252,56 +183,73 @@ const fetchUserRole = async (uid) => {
   }
 };
 
-const fetchReportDetails = async (reportData) => {
-  let details = {
-    fullDescription: reportData.description || 'No description found.',
-    plateNo: 'N/A',
-    suspiciousDetails: 'N/A',
-  };
-
-  let descriptionRef = reportData.description;
-
-  if (descriptionRef instanceof DocumentReference) {
-    try {
-      const descSnap = await getDoc(descriptionRef);
-
-      if (descSnap.exists()) {
-        const descData = descSnap.data();
-
-        details.fullDescription = descData.description || 'No detailed description.';
-
-        // Check the report type to map the correct fields
-        if (reportData.type?.toLowerCase() === 'traffic') {
-          details.plateNo = descData.plate_no || 'N/A';
-        }
-        else if (reportData.type?.toLowerCase() === 'suspicious') {
-          // Key details of suspicious document
-          details.suspiciousDetails =
-            `Gender: ${descData.gender || 'N/A'}, ` +
-            `Cloth: ${descData.cloth_color || 'N/A'}, ` +
-            `Height: ${descData.height || 'N/A'}`;
-        }
-      }
-    } catch (e) {
-      console.error("Failed to fetch dynamic report details:", e);
-      details.fullDescription = 'Error fetching details.';
-    }
-  }
-
-  return details;
+const TruncatedID = ({ id }) => {
+  if (!id) return <span className="text-gray-400">-</span>;
+  const shortId = id.length > 8 ? `${id.substring(0, 4)}...${id.substring(id.length - 4)}` : id;
+  return (
+    <div className="group relative inline-block">
+      <span className="font-mono text-[10px] text-gray-500 bg-gray-50/50 px-2 py-1 rounded border border-gray-100/50 group-hover:bg-blue-50/50 group-hover:text-blue-500 transition-colors cursor-help">
+        {shortId}
+      </span>
+    </div>
+  );
 };
 
 // --- Main Dashboard Component ---
 
 export default function Dashboard() {
-  const [reports, setReports] = useState([]);
+  const [reportsData, setReportsData] = useState({ Traffic: [], Suspicious: [] });
   const [kpiData, setKpiData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [error, setError] = useState(null);
+  const [heatmapFilter, setHeatmapFilter] = useState('all');
+  const [showPins, setShowPins] = useState(true);
+  const [distributionData, setDistributionData] = useState({ totalReports: 0, trafficCount: 0, suspiciousCount: 0 });
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
+  const [dateRange, setDateRange] = useState({ start: '', end: getTodayStr() });
+  const allReports = useMemo(() => {
+    return [...reportsData.Traffic, ...reportsData.Suspicious].sort((a, b) => b.createdAt - a.createdAt);
+  }, [reportsData]);
+
+  const filteredHeatmapReports = useMemo(() => {
+    return allReports.filter(report => {
+      const matchType = heatmapFilter === 'all' || report.type.toLowerCase() === heatmapFilter;
+      let matchDate = true;
+      if (dateRange.start) {
+        const startLimit = new Date(dateRange.start);
+        startLimit.setHours(0, 0, 0, 0);
+        if (report.createdAt < startLimit) matchDate = false;
+      }
+      if (dateRange.end) {
+        const endLimit = new Date(dateRange.end);
+        endLimit.setHours(23, 59, 59, 999);
+        if (report.createdAt > endLimit) matchDate = false;
+      }
+      return matchType && matchDate;
+    });
+  }, [allReports, heatmapFilter, dateRange]);
 
   useEffect(() => {
-    let unsubscribeReportsCleanup;
+    if (allReports.length === 0 && isLoading) return;
+    const now = new Date().toDateString();
+    const tCount = reportsData.Traffic.length;
+    const sCount = reportsData.Suspicious.length;
+    const pendingCount = allReports.filter(r => r.status?.toLowerCase() === 'pending').length;
+    const todayIncidents = allReports.filter(r => r.createdAt.toDateString() === now).length;
+
+    setKpiData([
+      { label: 'Pending Reports', value: pendingCount, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
+      { label: "Today's Incidents", value: todayIncidents, icon: Bell, color: 'text-[#1B56FD]', bg: 'bg-blue-50' },
+      { label: 'Total Reports', value: allReports.length, icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-50' },
+    ]);
+
+    setDistributionData({ totalReports: allReports.length, trafficCount: tCount, suspiciousCount: sCount });
+  }, [allReports, reportsData, isLoading]);
+
+  useEffect(() => {
+    let unsubscribeTraffic;
+    let unsubscribeSuspicious;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -331,7 +279,40 @@ export default function Dashboard() {
 
         if (isAuthorized) {
           // Start real-time report fetching
-          unsubscribeReportsCleanup = fetchReports();
+          const process = (snapshot, type) => snapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdDate = data.created_at?.toDate ? data.created_at.toDate() : new Date();
+            let displayDescription = 'No Description';
+            if (typeof data.description === 'string') {
+              displayDescription = data.description;
+            } else if (data.description?.id) {
+              displayDescription = "[Reference Data]";
+            }
+            return {
+              id: doc.id,
+              ...data,
+              type: type,
+              description: displayDescription.substring(0, 50) || 'No Description',
+              reporterID: data.reporter?.id || 'Anonymous',
+              plateNo: data.plate_number || 'N/A',
+              timeAgo: createdDate.toLocaleDateString('en-GB') + ' ' + createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+              createdAt: createdDate,
+              location: data.location || null,
+            };
+          });
+
+          unsubscribeTraffic = onSnapshot(query(collection(db, "traffic_reports"), orderBy("created_at", "desc")),
+            (snap) => {
+              setReportsData(prev => ({ ...prev, Traffic: process(snap, 'Traffic') }));
+              setIsLoading(false);
+            }, (err) => setError(err.message));
+
+          unsubscribeSuspicious = onSnapshot(query(collection(db, "suspicious_reports"), orderBy("created_at", "desc")),
+            (snap) => {
+              setReportsData(prev => ({ ...prev, Suspicious: process(snap, 'Suspicious') }));
+              setIsLoading(false);
+            }, (err) => setError(err.message));
+
         } else {
           // Unauthorized: Show message and stop loading
           setError(`Access Denied: Your role (${role}) is not authorized.`);
@@ -347,94 +328,15 @@ export default function Dashboard() {
     // Cleanup listener when leaving page
     return () => {
       unsubscribeAuth();
-      if (unsubscribeReportsCleanup) {
-        unsubscribeReportsCleanup();
-      }
+      if (unsubscribeTraffic) unsubscribeTraffic();
+      if (unsubscribeSuspicious) unsubscribeSuspicious();
     };
   }, []);
 
-  // Function to Fetch Reports in Real-Time
-  const fetchReports = () => {
-    const reportsQuery = query(
-      collection(db, "reports"),
-      orderBy("created_at", "desc")
-    );
 
-    // Setup real-time listener (onSnapshot)
-    const unsubscribe = onSnapshot(reportsQuery, async (snapshot) => {
-      setIsLoading(true);
-      let pendingCount = 0;
-      let totalTraffic = 0;
-      let totalSuspicious = 0;
-      let todayIncidents = 0;
-
-      // Use Promise.all to fetch the referenced description/plate_no data for ALL reports concurrently
-      const reportsPromises = snapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        const now = Timestamp.now().toDate();
-        const createdDate = data.created_at?.toDate ? data.created_at.toDate() : now;
-        // Await the dynamic details fetch
-        const fetchedDetails = await fetchReportDetails(data);
-
-        // --- KPI Calculation ---
-        if (data.status?.toLowerCase() === 'pending') { pendingCount++; }
-        if (createdDate.toDateString() === Timestamp.now().toDate().toDateString()) { todayIncidents++; }
-        if (data.type?.toLowerCase() === 'traffic') { totalTraffic++; }
-        else if (data.type?.toLowerCase() === 'suspicious') { totalSuspicious++; }
-        // --- End KPI Calculation ---
-
-        const formattedDateTime = createdDate.toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true, // Use AM/PM format
-        });
-
-        // Safely map and flatten Firestore objects
-        return {
-          id: doc.id,
-          title: fetchedDetails.fullDescription.substring(0, 50) || 'New Report',
-          type: data.type === 'traffic' ? 'Traffic' : 'Suspicious',
-          status: data.status || 'Pending',
-          reporterName: data.reporter.id || 'Anonymous',
-          timeAgo: formattedDateTime,
-          location: data.location || null,
-          ...fetchedDetails,
-        };
-      });
-
-      // Resolve all promises
-      const reportsList = await Promise.all(reportsPromises);
-
-      // Update KPI Data
-      setKpiData([
-        { label: 'Pending Reports', value: pendingCount, icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
-        { label: "Today's Incidents", value: todayIncidents, icon: Bell, color: 'text-[#1B56FD]', bg: 'bg-blue-50' },
-        { label: 'Total Reports', value: reportsList.length, icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-50' },
-      ]);
-
-      setReports(reportsList);
-      setIsLoading(false);
-      // Also store counts for the DistributionChart
-      setDistributionData({ totalReports: reportsList.length, trafficCount: totalTraffic, suspiciousCount: totalSuspicious });
-
-    }, (err) => {
-      // Error path: Set error and stop loading
-      console.error("Firestore real-time listener failed:", err);
-      setError(`Failed to load reports: ${err.code}. Check Security Rules!`);
-      setIsLoading(false);
-    });
-
-    return unsubscribe;
-  };
-
-  const [distributionData, setDistributionData] = useState({ totalReports: 0, trafficCount: 0, suspiciousCount: 0 });
 
   // --- Render Logic ---
   const isAuthorized = userRole === 'admin' || userRole === 'authority';
-
   const renderContent = () => {
     if (isLoading) {
       return <p className="text-center py-20 text-blue-600 font-medium text-lg">Loading user role and fetching reports...</p>;
@@ -465,12 +367,66 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 min-h-[400px]">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <div className="mb-4">
-                <h3 className="font-bold text-gray-800 text-lg">Incident Heatmap</h3>
-                <p className="text-xs text-gray-500">Visual density of reported locations across campus</p>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div className="mb-4">
+                  <h3 className="font-bold text-gray-800 text-lg">Report Heatmap</h3>
+                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+                    {/* Toggle Pins Button */}
+                    <button
+                      onClick={() => setShowPins(!showPins)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${showPins
+                          ? 'bg-blue-50 text-blue-600 border-blue-200'
+                          : 'bg-gray-50 text-gray-400 border-gray-200'
+                        }`}
+                    >
+                      Show Pins
+                    </button>
+                    {/* Date Range Selectors */}
+                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2 py-1 gap-2">
+                      <input
+                        type="date"
+                        className="bg-transparent border-none text-xs font-semibold focus:ring-0 p-1"
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                      />
+                      <span className="text-gray-400 text-xs">to</span>
+                      <input
+                        type="date"
+                        className="bg-transparent border-none text-xs font-semibold focus:ring-0 p-1"
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                      />
+                      {(dateRange.start || dateRange.end) && (
+                        <button
+                          onClick={() => setDateRange({ start: '', end: '' })}
+                          className="ml-1 p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+                          title="Clear Date Filter"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                    {/* Type Toggle */}
+                    <div className="flex bg-gray-100 p-1 rounded-xl">
+                      {['all', 'traffic', 'suspicious'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setHeatmapFilter(type)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${heatmapFilter === type
+                              ? 'bg-white shadow-sm text-blue-600 border border-gray-200'
+                              : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                        >
+                          {type.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-              {/* Pass your reports state here */}
-              <ReportHeatmap reports={reports} />
+              <div className="flex-1 rounded-xl overflow-hidden border">
+                <ReportHeatmap reports={filteredHeatmapReports} showPins={showPins} />
+              </div>
             </div>
           </div>
           <div className="min-h-[400px]">
@@ -484,8 +440,8 @@ export default function Dashboard() {
 
         {/* Row 3: Recent Activity Table */}
         <div className="space-y-4">
-          <RecentTable reports={reports.slice(0, 10)} />
-          {reports.length > 10 && (
+          <RecentTable reports={allReports.slice(0, 10)} />
+          {allReports.length > 10 && (
             <div className="flex justify-center pb-4">
               <button
                 onClick={() => router.visit(route('reports.index'))}

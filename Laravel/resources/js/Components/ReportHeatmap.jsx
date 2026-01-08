@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
+import { Link } from '@inertiajs/react';
 import { Crosshair, AlertCircle, Car } from 'lucide-react';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -38,25 +39,30 @@ const trafficIcon = createCustomIcon('#3b82f6'); // Blue
 const suspiciousIcon = createCustomIcon('#ef4444'); // Red
 
 // --- Component to handle Map Actions (Heatmap & Recentering) ---
-const MapController = ({ points, userLocation }) => {
+const HeatLayer = ({ points }) => {
     const map = useMap();
 
     // Initialize Heatmap
     useEffect(() => {
         if (!map || !points.length) return;
         const heatLayer = L.heatLayer(points, {
-            radius: 20,
+            radius: 25,
             blur: 15,
             maxZoom: 17,
+            gradient: { 0.4: 'blue', 0.6: 'lime', 1: 'red' }
         }).addTo(map);
 
-        return () => { map.removeLayer(heatLayer); };
+        return () => { 
+            if (map && heatLayer) {
+                map.removeLayer(heatLayer); 
+            }
+        };
     }, [map, points]);
 
     return null;
 };
 
-const ReportHeatmap = ({ reports }) => {
+const ReportHeatmap = ({ reports, showPins }) => {
     const [mapInstance, setMapInstance] = useState(null);
     
     // UTM Skudai / Your Location Center
@@ -104,10 +110,10 @@ const ReportHeatmap = ({ reports }) => {
                     </Popup>
                 </Marker>
 
-                <MapController points={heatPoints} />
+                <HeatLayer points={heatPoints} />
 
                 {/* --- Render Individual Pins --- */}
-                {reports.map((report) => (
+                {showPins && reports.map((report) => (
                     report.location?.latitude && (
                         <Marker 
                             key={report.id} 
@@ -123,7 +129,12 @@ const ReportHeatmap = ({ reports }) => {
                                         }
                                         <span className="font-bold uppercase text-xs">{report.type}</span>
                                     </div>
-                                    <p className="text-xs text-gray-600 line-clamp-2">{report.id}</p>
+                                    <Link 
+                                        href={route('report.view', { reportId: report.id, reportType: report.type })}
+                                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-mono block break-all"
+                                    >
+                                        ID: {report.id}
+                                    </Link>
                                     <p className={`text-[10px] font-bold mt-1 uppercase ${
                                         report.status === 'resolved' ? 'text-green-600' : 'text-orange-500'
                                     }`}>
@@ -139,10 +150,10 @@ const ReportHeatmap = ({ reports }) => {
             {/* --- Map Legend --- */}
             <div className="absolute bottom-4 left-4 z-[1000] bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border border-gray-200 text-[10px] space-y-1">
                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div> <span>Traffic Violation</span>
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div> <span>Traffic</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-red-500"></div> <span>Suspicious Activity</span>
+                    <div className="w-2 h-2 rounded-full bg-red-500"></div> <span>Suspicious</span>
                 </div>
             </div>
         </div>
