@@ -59,64 +59,114 @@ const SortableHeader = ({ label, sortKey, currentSort, onSort, className = "" })
 };
 
 // --- Report Table Component ---
-const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSearchChange, sortConfig, onSort }) => {
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSearchChange, sortConfig, onSort, filterStatus, onStatusChange, dateRange, onDateRangeChange }) => {
+    const [isFilterBarVisible, setIsFilterBarVisible] = useState(false);
+    const getTodayStr = () => new Date().toISOString().split('T')[0];
+
+    const clearFilters = () => {
+        onFilterChange('all');
+        onStatusChange('all');
+        onDateRangeChange({ start: '', end: getTodayStr() });
+        onSearchChange('');
+    };
 
     return (
         <GlassCard className="overflow-hidden min-h-[600px] flex flex-col shadow-none">
             {/* Header / Controls Area */}
-            <div className="px-8 py-6 border-b border-black/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-6">
-                <div>
+            <div className="px-8 py-6 border-b border-black/5 flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <h3 className="font-bold text-gray-900 text-xl tracking-tight">All Reports ({reports.length})</h3>
-                </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 items-center">
-                    <GlassInput
-                        value={searchQuery}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="Search reports..."
-                        className="w-full sm:w-72"
-                    />
-
-                    <div className="relative">
-                        <GlassButton
-                            onClick={() => setIsFilterOpen(!isFilterOpen)}
-                            className={`px-4 py-2.5 text-sm font-medium border border-gray-200/50 ${filterType !== 'all' ? 'text-blue-600 bg-blue-50/50' : 'text-gray-600'}`}
+                    <div className="flex flex-col sm:flex-row gap-3 items-center">
+                        <GlassInput
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange(e.target.value)}
+                            placeholder="Search reports..."
+                            className="w-full sm:w-72"
+                        />
+                        <GlassButton 
+                            onClick={() => setIsFilterBarVisible(!isFilterBarVisible)}
+                            className={`px-3 h-10 border ${isFilterBarVisible ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-gray-200 text-gray-500'}`}
                         >
-                            <Filter size={16} className="mr-2" />
-                            {filterType === 'all' ? 'Filter' : filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                            <Filter size={18} />
                         </GlassButton>
-
-                        {isFilterOpen && (
-                            <div className="absolute top-12 right-0 z-20 w-48 bg-white/95 backdrop-blur-xl border border-gray-200 rounded-2xl py-1 overflow-hidden">
-                                {['all', 'traffic', 'suspicious'].map((type) => (
-                                    <button
-                                        key={type}
-                                        onClick={() => { onFilterChange(type); setIsFilterOpen(false); }}
-                                        className={`w-full text-left px-5 py-3 text-sm font-medium transition-colors ${filterType === type ? 'bg-blue-50/80 text-blue-600' : 'hover:bg-gray-50 text-gray-600'
-                                            }`}
-                                    >
-                                        {type === 'all' ? 'All Reports' : `${type.charAt(0).toUpperCase() + type.slice(1)}`}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
+
+                {/* Advanced Filter Bar */}
+                {isFilterBarVisible && (
+                    <div className="flex flex-wrap items-end gap-4 bg-gray-50/80 p-4 rounded-xl border border-gray-100 animate-in slide-in-from-top-2 duration-200">
+                        {/* Category Filter */}
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase ml-1">Type</span>
+                            <select 
+                                value={filterType}
+                                onChange={(e) => onFilterChange(e.target.value)}
+                                className="bg-white border-gray-200 rounded-lg text-xs font-medium focus:ring-blue-500 h-9 w-32"
+                            >
+                                <option value="all">All Types</option>
+                                <option value="traffic">Traffic</option>
+                                <option value="suspicious">Suspicious</option>
+                            </select>
+                        </div>
+
+                        {/* Status Filter */}
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase ml-1">Status</span>
+                            <select 
+                                value={filterStatus}
+                                onChange={(e) => onStatusChange(e.target.value)}
+                                className="bg-white border-gray-200 rounded-lg text-xs font-medium focus:ring-blue-500 h-9 w-32"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+
+                        {/* Date Range */}
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase ml-1">Date Range</span>
+                            <div className="flex items-center bg-white border border-gray-200 rounded-lg px-2 h-9 gap-2">
+                                <input 
+                                    type="date" 
+                                    className="border-none text-[11px] p-0 focus:ring-0 w-28 font-medium"
+                                    value={dateRange.start}
+                                    onChange={(e) => onDateRangeChange({...dateRange, start: e.target.value})}
+                                />
+                                <span className="text-gray-300">-</span>
+                                <input 
+                                    type="date" 
+                                    className="border-none text-[11px] p-0 focus:ring-0 w-28 font-medium"
+                                    value={dateRange.end}
+                                    onChange={(e) => onDateRangeChange({...dateRange, end: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={clearFilters}
+                            className="h-9 px-4 text-xs font-bold text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Table Area */}
             <div className="overflow-x-auto flex-1">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr className="border-b border-black/5 text-[11px] uppercase tracking-widest font-semibold text-gray-400">
-                            <th className="pl-8 pr-4 py-4">Report ID</th>
-                            <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={onSort} className="px-2" />
-                            <SortableHeader label="Type" sortKey="type" currentSort={sortConfig} onSort={onSort} className="px-2" />
-                            <SortableHeader label="Time" sortKey="createdAt" currentSort={sortConfig} onSort={onSort} className="px-4" />
-                            <SortableHeader label="Reporter" sortKey="reporterID" currentSort={sortConfig} onSort={onSort} className="px-4" />
-                            <SortableHeader label="Details" sortKey="description" currentSort={sortConfig} onSort={onSort} className="px-4" />
-                            <th className="px-8 py-4 text-right"></th>
+                            <th className="pl-8 pr-4 py-4 w-[120px]">Report ID</th>
+                            <SortableHeader label="Status" sortKey="status" currentSort={sortConfig} onSort={onSort} className="px-2 w-[110px]" />
+                            <SortableHeader label="Type" sortKey="type" currentSort={sortConfig} onSort={onSort} className="px-2 w-[130px]" />
+                            <SortableHeader label="Time" sortKey="createdAt" currentSort={sortConfig} onSort={onSort} className="px-4 w-[180px]" />
+                            <SortableHeader label="Reporter" sortKey="reporterID" currentSort={sortConfig} onSort={onSort} className="px-4 w-[150px]" />
+                            <SortableHeader label="Details" sortKey="description" currentSort={sortConfig} onSort={onSort} className="px-4 w-auto" />
+                            <th className="px-8 py-4 text-right w-[60px]"></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50/50">
@@ -138,10 +188,8 @@ const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSear
                                     onClick={() => router.visit(route('report.view', { reportId: report.id, reportType: report.type }))}
                                     className="group hover:bg-blue-50/30 transition-colors duration-200 cursor-pointer border-b border-gray-100 last:border-0"
                                 >
-                                    <td className="pl-8 pr-4 py-5 align-middle">
-                                        <span className="text-sm font-medium text-gray-700 font-mono">
-                                            {report.id}
-                                        </span>
+                                    <td className="pl-8 pr-4 py-5 align-middle truncate font-mono text-sm">
+                                        {report.id}
                                     </td>   
                                     <td className="px-2 py-5 align-middle">
                                         <GlassBadge
@@ -160,17 +208,15 @@ const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSear
                                             minWidth="min-w-[120px]"
                                         />
                                     </td>
-                                    <td className="px-4 py-5 align-middle">
-                                        <span className="text-sm font-medium text-gray-700 font-mono">
-                                            {report.createdAt.toLocaleString('en-US', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: true
-                                            })}
-                                        </span>
+                                    <td className="px-4 py-5 align-middle truncate text-sm">
+                                        {report.createdAt.toLocaleString('en-US', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            hour12: true
+                                        })}
                                     </td>
                                     <td className="px-4 py-5 align-middle">
                                         <div className="flex items-center gap-2">
@@ -184,8 +230,8 @@ const ReportsTable = ({ reports, filterType, onFilterChange, searchQuery, onSear
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-5 align-middle max-w-xs">
-                                        <div>
+                                    <td className="px-4 py-5 align-middle">
+                                        <div className="max-w-[400px]">
                                             <div className="font-medium text-sm text-gray-900 truncate" description={report.description}>
                                                 {report.description}
                                             </div>
@@ -221,6 +267,8 @@ export default function Reports() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filterType, setFilterType] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [dateRange, setDateRange] = useState({ start: '', end: '' });
     const [searchQuery, setSearchQuery] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
@@ -248,6 +296,7 @@ export default function Reports() {
                     description: displayDescription.substring(0, 50) || 'No Description',
                     reporterID: data.reporter?.id || 'Anonymous',
                     plateNo: data.plate_number || 'N/A',
+                    locationLabel: data.location_label || 'N/A',
                     timeAgo: createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
                              ' ' + createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
                     createdAt: createdDate,
@@ -295,23 +344,43 @@ export default function Reports() {
 
     // Filter and sort reports using useMemo for performance
     const processedReports = useMemo(() => {
-        let result = allReports.filter(r => filterType === 'all' || r.type.toLowerCase() === filterType);
+        let result = allReports;
 
+        // Filter by Report Type
+        if (filterType !== 'all') {
+            result = result.filter(r => r.type.toLowerCase() === filterType);
+        }
+        // Filter by Status
+        if (filterStatus !== 'all') {
+            result = result.filter(r => r.status.toLowerCase() === filterStatus);
+        }
+        // Filter by Date Range
+        if (dateRange.start) {
+            const startLimit = new Date(dateRange.start);
+            startLimit.setHours(0, 0, 0, 0);
+            result = result.filter(r => r.createdAt >= startLimit);
+        }
+        if (dateRange.end) {
+            const endLimit = new Date(dateRange.end);
+            endLimit.setHours(23, 59, 59, 999);
+            result = result.filter(r => r.createdAt <= endLimit);
+        }
         // Apply search filter
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             result = result.filter((r) => {
                 const searchableFields = [
+                    r.id,
                     r.status,
                     r.type,
                     r.reporterID,
                     r.description,
-                    r.id,
                     r.plateNo,
+                    r.locationLabel,
                 ].filter(Boolean);
 
                 return searchableFields.some((field) =>
-                    field.toString().toLowerCase().includes(query)
+                    field.toString().toLowerCase().includes(q)
                 );
             });
         }
@@ -337,7 +406,7 @@ export default function Reports() {
         });
 
         return result;
-    }, [allReports, searchQuery, sortConfig, filterType]);
+    }, [allReports, searchQuery, sortConfig, filterType, filterStatus, dateRange]);
 
     return (
         <AuthenticatedLayout>
@@ -364,6 +433,10 @@ export default function Reports() {
                             reports={processedReports}
                             filterType={filterType}
                             onFilterChange={setFilterType}
+                            filterStatus={filterStatus}
+                            onStatusChange={setFilterStatus}
+                            dateRange={dateRange}
+                            onDateRangeChange={setDateRange}
                             searchQuery={searchQuery}
                             onSearchChange={setSearchQuery}
                             sortConfig={sortConfig}

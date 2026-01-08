@@ -1,16 +1,12 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { app } from '@/firebaseConfig';
 import {
     LogOut,
-    Bell,
-    Search,
     Menu,
     X
 } from 'lucide-react';
@@ -103,6 +99,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <NavbarItem href={route('reports.index')} active={route().current('reports.index')}>
                                     Reports
                                 </NavbarItem>
+                                <NavbarItem href={route('feedbacks.index')} active={route().current('feedbacks.index')}>
+                                    Feedbacks
+                                </NavbarItem>
                             </div>
                         </div>
 
@@ -152,8 +151,11 @@ export default function AuthenticatedLayout({ header, children }) {
                             <ResponsiveNavLink href={route('dashboard')} active={route().current('dashboard')}>
                                 Dashboard
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink href="#" active={false}>
+                            <ResponsiveNavLink href={route('reports.index')} active={route().current('reports.index')}>
                                 Reports
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink href={route('feedbacks.index')} active={route().current('feedbacks.index')}>
+                                Feedbacks
                             </ResponsiveNavLink>
                         </div>
 
