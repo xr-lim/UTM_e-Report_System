@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -44,23 +45,57 @@ class _StatusScreenState extends State<StatusScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    Query<Map<String, dynamic>> baseQuery = FirebaseFirestore.instance.collection('reports');
 
-    if (user != null) {
-      baseQuery = baseQuery.where('reporter', isEqualTo: FirebaseFirestore.instance.collection('users').doc(user.uid));
+    // Create a combined stream that listens to both suspicious_reports and traffic_reports
+    Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> combinedStream() {
+      final firestore = FirebaseFirestore.instance;
+
+      return Stream.multi((controller) {
+        StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? subA;
+        StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? subB;
+
+        var latestA = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        var latestB = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+
+        Query<Map<String, dynamic>> qA = firestore.collection('suspicious_reports');
+        Query<Map<String, dynamic>> qB = firestore.collection('traffic_reports');
+
+        if (user != null) {
+          final userRef = firestore.collection('users').doc(user.uid);
+          qA = qA.where('reporter', isEqualTo: userRef);
+          qB = qB.where('reporter', isEqualTo: userRef);
+        }
+
+        if (_selectedFilter != 'all') {
+          qA = qA.where('status', isEqualTo: _selectedFilter);
+          qB = qB.where('status', isEqualTo: _selectedFilter);
+        }
+
+        subA = qA.snapshots().listen((snap) {
+          latestA = snap.docs;
+          controller.add([...latestA, ...latestB]);
+        });
+
+        subB = qB.snapshots().listen((snap) {
+          latestB = snap.docs;
+          controller.add([...latestA, ...latestB]);
+        });
+
+        controller.onCancel = () {
+          subA?.cancel();
+          subB?.cancel();
+        };
+      });
     }
 
-    // apply status filter unless 'All' is selected
-    final stream = (_selectedFilter == 'all')
-        ? baseQuery.snapshots()
-        : baseQuery.where('status', isEqualTo: _selectedFilter).snapshots();
+    final stream = combinedStream();
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Report Status'),
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      body: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
         stream: stream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -90,7 +125,7 @@ class _StatusScreenState extends State<StatusScreen> {
             );
           }
 
-          final reports = snapshot.data?.docs ?? [];
+          final reports = snapshot.data ?? [];
 
           String? emptyMessage;
           if (reports.isEmpty) {

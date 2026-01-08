@@ -17,8 +17,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _pages = [
     const ReportScreen(),
-    const EmergencyScreen(),
     const StatusScreen(),
+    const EmergencyScreen(),
     const FeedbackScreen(),
   ];
 
@@ -43,12 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 text: 'Report'
               ),
               GButton(
-                icon: Icons.shield,
-                text: 'Emergency'
-              ),
-              GButton(
                 icon: Icons.list_alt,
                 text: 'Status'
+              ),
+              GButton(
+                icon: Icons.shield,
+                text: 'Emergency'
               ),
               GButton(
                 icon: Icons.feedback,
