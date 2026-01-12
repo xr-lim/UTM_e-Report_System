@@ -21,18 +21,8 @@ if (!isset($input['message'])) {
     exit;
 }
 
-// Read API key from environment - you need to set DEEPSEEK_API_KEY in your .env file
-$envFile = __DIR__ . '/../.env';
+// Hardcoded API key placeholder
 $apiKey = '';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, 'DEEPSEEK_API_KEY=') === 0) {
-            $apiKey = trim(substr($line, strlen('DEEPSEEK_API_KEY=')));
-            break;
-        }
-    }
-}
 
 if (empty($apiKey)) {
     echo json_encode(['success' => false, 'message' => 'API key not configured']);
