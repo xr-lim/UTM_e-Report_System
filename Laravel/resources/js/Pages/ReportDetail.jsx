@@ -9,7 +9,7 @@ import {
     Timestamp
 } from "firebase/firestore";
 import { app } from "@/firebaseConfig";
-import { AlertTriangle, Car, Eye, MapPin, Loader, Save, ArrowLeft, X, Maximize2 } from 'lucide-react';
+import { AlertTriangle, Car, Eye, MapPin, Loader, Save, ArrowLeft, X, Maximize2, ExternalLink } from 'lucide-react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 // --- Initialize Firebase Services ---
@@ -358,9 +358,25 @@ export default function ReportDetail({ auth, reportId, reportType }) {
                                                     <div className="h-full flex items-center justify-center text-gray-400">No Location Data</div>
                                                 )}
                                             </div>
-                                            <div className="p-3 bg-white text-[11px] text-black-500 border-t">
-                                                {report.location_label}
-                                            </div>
+                                            <a 
+                                                href={osmUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="block p-3 bg-white hover:bg-gray-50 transition-colors border-t group"
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className="text-[11px] leading-tight text-gray-700 font-medium">
+                                                        {report.location_label ? (
+                                                            report.location_label
+                                                        ) : (
+                                                            <span className="font-mono text-gray-500">
+                                                                GPS: {report.location?.latitude.toFixed(6)}, {report.location?.longitude.toFixed(6)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <ExternalLink size={12} className="text-gray-400 group-hover:text-blue-500 flex-shrink-0 ml-2" />
+                                                </div>
+                                            </a>
                                         </div>
                                     </p>
                                 </div>
