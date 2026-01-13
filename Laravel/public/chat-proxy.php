@@ -21,18 +21,13 @@ if (!isset($input['message'])) {
     exit;
 }
 
+// Load environment variables using Laravel's Dotenv
+require __DIR__ . '/../vendor/autoload.php';
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->safeLoad();
+
 // Read API key from environment - you need to set DEEPSEEK_API_KEY in your .env file
-$envFile = __DIR__ . '/../.env';
-$apiKey = '';
-if (file_exists($envFile)) {
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        if (strpos($line, 'DEEPSEEK_API_KEY=') === 0) {
-            $apiKey = trim(substr($line, strlen('DEEPSEEK_API_KEY=')));
-            break;
-        }
-    }
-}
+$apiKey = $_ENV['DEEPSEEK_API_KEY'] ?? $_SERVER['DEEPSEEK_API_KEY'] ?? getenv('DEEPSEEK_API_KEY') ?: '';
 
 if (empty($apiKey)) {
     echo json_encode(['success' => false, 'message' => 'API key not configured']);
